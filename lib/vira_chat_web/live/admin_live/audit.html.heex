@@ -1,0 +1,87 @@
+<.admin_layout active={:audit} current_user={@current_user}>
+  <div class="flex justify-between items-center mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800">Audit log</h1>
+      <p class="text-sm text-gray-500 mt-1">Every admin action, most recent first</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <form phx-change="filter">
+        <select
+          name="action"
+          class="text-sm px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="" selected={@action_filter == ""}>All actions</option>
+          <%= for a <- @actions do %>
+            <option value={a} selected={@action_filter == a}>
+              <%= ViraChat.Admin.AdminAction.label(a) %>
+            </option>
+          <% end %>
+        </select>
+      </form>
+      <button
+        phx-click="refresh"
+        class="text-sm px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700"
+      >
+        ↻ Refresh
+      </button>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <%= if @entries == [] do %>
+      <div class="p-12 text-center text-gray-400">
+        <p class="text-3xl mb-2">📭</p>
+        <p>No audit entries yet</p>
+      </div>
+    <% else %>
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-200 text-left text-xs uppercase text-gray-500">
+          <tr>
+            <th class="px-4 py-3">When</th>
+            <th class="px-4 py-3">Actor</th>
+            <th class="px-4 py-3">Action</th>
+            <th class="px-4 py-3">Target</th>
+            <th class="px-4 py-3">Details</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <%= for entry <- @entries do %>
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                <%= Calendar.strftime(entry.inserted_at, "%Y-%m-%d %H:%M:%S") %>
+              </td>
+              <td class="px-4 py-3">
+                <%= if entry.actor do %>
+                  <div class="text-sm font-medium text-gray-800">
+                    <%= ViraChat.Accounts.User.display_name(entry.actor) %>
+                  </div>
+                  <div class="text-xs text-gray-500"><%= entry.actor.email %></div>
+                <% else %>
+                  <span class="text-xs text-gray-400 italic">(deleted)</span>
+                <% end %>
+              </td>
+              <td class="px-4 py-3">
+                <span class={"text-xs font-medium px-2 py-0.5 rounded #{action_badge_class(entry.action)}"}>
+                  <%= ViraChat.Admin.AdminAction.label(entry.action) %>
+                </span>
+              </td>
+              <td class="px-4 py-3">
+                <%= if entry.target_user do %>
+                  <div class="text-sm text-gray-800">
+                    <%= ViraChat.Accounts.User.display_name(entry.target_user) %>
+                  </div>
+                  <div class="text-xs text-gray-500"><%= entry.target_user.email %></div>
+                <% else %>
+                  <span class="text-xs text-gray-400">—</span>
+                <% end %>
+              </td>
+              <td class="px-4 py-3 text-xs text-gray-600">
+                <%= format_details(entry.details) %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
+  </div>
+</.admin_layout>

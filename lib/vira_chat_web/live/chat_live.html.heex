@@ -1,0 +1,542 @@
+<div class="flex h-screen bg-slate-50 dark:bg-slate-950">
+  <!-- SIDEBAR -->
+  <div class={"#{if @active_conversation, do: "hidden md:flex", else: "flex"} w-full md:w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex-col flex-shrink-0"}>
+    <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm">V</div>
+        <h1 class="text-lg font-bold text-slate-800 dark:text-slate-100">ViraChat</h1>
+      </div>
+      <div class="flex gap-1">
+        <button
+          phx-click="toggle_new_chat"
+          title="New chat"
+          class="w-9 h-9 flex items-center justify-center rounded-lg text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-800 text-xl font-bold"
+        >+</button>
+        <button
+          phx-click="toggle_new_group"
+          title="New group"
+          class="w-9 h-9 flex items-center justify-center rounded-lg text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-800 text-lg"
+        >👥</button>
+      </div>
+    </div>
+
+    <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800">
+      <form phx-change="search" phx-submit="search" class="relative">
+        <input
+          type="text"
+          name="query"
+          value={@search_query}
+          placeholder="Search messages..."
+          autocomplete="off"
+          phx-debounce="300"
+          class="w-full pl-9 pr-9 py-2.5 text-sm bg-slate-100 dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-500"
+        />
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
+        <%= if @search_query != "" do %>
+          <button
+            type="button"
+            phx-click="clear_search"
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm"
+          >✕</button>
+        <% end %>
+      </form>
+    </div>
+
+    <%= if @show_new_chat do %>
+      <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+        <h2 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Start a new chat</h2>
+        <div class="space-y-0.5 max-h-56 overflow-y-auto">
+          <%= for user <- @users do %>
+            <button
+              phx-click="start_chat"
+              phx-value-user_id={user.id}
+              class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-sm flex items-center gap-3 text-slate-700 dark:text-slate-200 transition"
+            >
+              <span class={"w-2 h-2 rounded-full flex-shrink-0 #{if user.id in @online_users, do: "bg-green-500", else: "bg-slate-300 dark:bg-slate-600"}"}></span>
+              <%= if user.avatar_url do %>
+                <img src={user.avatar_url} class="w-8 h-8 rounded-full object-cover" />
+              <% else %>
+                <div class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs font-bold">
+                  <%= String.first(user.email) |> String.upcase() %>
+                </div>
+              <% end %>
+              <span class="truncate"><%= ViraChat.Accounts.User.display_name(user) %></span>
+            </button>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+    <%= if @show_new_group do %>
+      <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-indigo-50 dark:bg-indigo-950/40">
+        <h2 class="text-xs font-semibold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider mb-3">New group</h2>
+        <form phx-change="update_group_title">
+          <input
+            type="text"
+            name="value"
+            placeholder="Group name"
+            value={@group_title}
+            autocomplete="off"
+            class="w-full px-3 py-2 mb-3 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </form>
+        <div class="text-xs text-slate-500 dark:text-slate-400 mb-2">Select members</div>
+        <div class="space-y-0.5 max-h-56 overflow-y-auto mb-3">
+          <%= for user <- @users do %>
+            <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-800 cursor-pointer text-sm text-slate-700 dark:text-slate-200">
+              <input
+                type="checkbox"
+                checked={user.id in @group_members}
+                phx-click="toggle_group_member"
+                phx-value-user_id={user.id}
+                class="rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span><%= ViraChat.Accounts.User.display_name(user) %></span>
+            </label>
+          <% end %>
+        </div>
+        <button
+          phx-click="create_group"
+          class="w-full px-3 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition"
+        >Create group</button>
+      </div>
+    <% end %>
+
+    <div class="flex-1 overflow-y-auto">
+      <%= if @search_query != "" do %>
+        <div class="px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800">
+          <%= if @search_results == [] do %>
+            No results
+          <% else %>
+            <%= length(@search_results) %> result<%= if length(@search_results) != 1, do: "s" %>
+          <% end %>
+        </div>
+        <%= for message <- @search_results do %>
+          <.link
+            patch={~p"/chat/#{message.conversation_id}"}
+            class="block px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition"
+          >
+            <div class="flex items-center gap-2 mb-1.5">
+              <%= if message.user.avatar_url do %>
+                <img src={message.user.avatar_url} class="w-5 h-5 rounded-full object-cover" />
+              <% else %>
+                <div class="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-white text-[10px] font-bold">
+                  <%= String.first(message.user.email) |> String.upcase() %>
+                </div>
+              <% end %>
+              <span class="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">
+                <%= ViraChat.Accounts.User.display_name(message.user) %>
+              </span>
+              <span class="text-xs text-slate-400 dark:text-slate-500 ml-auto flex-shrink-0">
+                <%= Calendar.strftime(message.inserted_at, "%b %d") %>
+              </span>
+            </div>
+            <div class="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 break-words">
+              <%= highlight(message.content, @search_query) %>
+            </div>
+          </.link>
+        <% end %>
+      <% else %>
+        <%= for conversation <- @conversations do %>
+          <% unread = Map.get(@unread_counts, conversation.id, 0) %>
+          <% avatar = conversation_avatar(conversation, @current_user) %>
+          <.link
+            patch={~p"/chat/#{conversation.id}"}
+            class={"block px-4 py-3.5 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex items-center gap-3 transition #{if @active_conversation && @active_conversation.id == conversation.id, do: "bg-indigo-50 dark:bg-indigo-950/40", else: ""}"}
+          >
+            <%= if avatar do %>
+              <img src={avatar} class="w-11 h-11 rounded-full object-cover flex-shrink-0" />
+            <% else %>
+              <div class={"w-11 h-11 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 #{if conversation.type == "group", do: "bg-gradient-to-br from-violet-500 to-purple-600", else: "bg-gradient-to-br from-indigo-500 to-blue-600"}"}>
+                <%= String.first(conversation_title(conversation, @current_user)) |> String.upcase() %>
+              </div>
+            <% end %>
+            <div class={"flex-1 truncate #{if unread > 0, do: "text-slate-900 dark:text-white font-semibold", else: "text-slate-700 dark:text-slate-200 font-medium"}"}>
+              <%= conversation_title(conversation, @current_user) %>
+            </div>
+            <%= if unread > 0 do %>
+              <span class="bg-indigo-600 text-white text-xs font-bold rounded-full px-2 py-0.5 min-w-[1.35rem] text-center flex-shrink-0">
+                <%= if unread > 99, do: "99+", else: unread %>
+              </span>
+            <% end %>
+          </.link>
+        <% end %>
+      <% end %>
+    </div>
+
+    <div class="border-t border-slate-200 dark:border-slate-800">
+      <%= if !@push_enabled do %>
+        <div class="px-3 pt-3">
+          <button
+            type="button"
+            id="enable-push-btn"
+            phx-hook="EnablePush"
+            class="w-full text-sm bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 transition"
+          >🔔 Enable notifications</button>
+        </div>
+      <% end %>
+      <div class="px-3 pt-2">
+        <button
+          type="button"
+          id="theme-toggle"
+          phx-hook="Theme"
+          phx-update="ignore"
+          class="w-full text-sm bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 transition"
+        >🌓 Toggle dark mode</button>
+      </div>
+      <div class="px-4 py-3 flex items-center gap-3">
+        <.link navigate={~p"/users/profile"} class="flex items-center gap-2.5 flex-1 min-w-0 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 px-2 py-1.5 -mx-2 transition">
+          <%= if @current_user.avatar_url do %>
+            <img src={@current_user.avatar_url} class="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+          <% else %>
+            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+              <%= String.first(@current_user.email) |> String.upcase() %>
+            </div>
+          <% end %>
+          <span class="text-sm text-slate-700 dark:text-slate-300 truncate font-medium">
+            <%= ViraChat.Accounts.User.display_name(@current_user) %>
+          </span>
+        </.link>
+        <.link href={~p"/users/log-out"} method="delete" class="text-sm text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 flex-shrink-0 transition">Log out</.link>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT AREA -->
+  <div class={"#{if @active_conversation, do: "flex", else: "hidden md:flex"} flex-1 flex-col bg-slate-50 dark:bg-slate-950 min-w-0"}>
+    <%= if @active_conversation do %>
+      <% header_avatar = conversation_avatar(@active_conversation, @current_user) %>
+      <div class="px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 flex-shrink-0">
+        <button
+          phx-click="close_conversation"
+          class="md:hidden w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 -ml-1"
+          title="Back"
+        >←</button>
+        <%= if header_avatar do %>
+          <img src={header_avatar} class="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+        <% else %>
+          <div class={"w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 #{if @active_conversation.type == "group", do: "bg-gradient-to-br from-violet-500 to-purple-600", else: "bg-gradient-to-br from-indigo-500 to-blue-600"}"}>
+            <%= String.first(conversation_title(@active_conversation, @current_user)) |> String.upcase() %>
+          </div>
+        <% end %>
+        <div class="flex-1 min-w-0">
+          <h2 class="text-base font-semibold text-slate-800 dark:text-slate-100 truncate">
+            <%= conversation_title(@active_conversation, @current_user) %>
+          </h2>
+          <%= if @active_conversation.type == "group" do %>
+            <p class="text-xs text-slate-500 dark:text-slate-400 truncate">
+              <%= Enum.map_join(@active_conversation.users, ", ", &ViraChat.Accounts.User.display_name/1) %>
+            </p>
+          <% else %>
+            <% other = Enum.find(@active_conversation.users, fn u -> u.id != @current_user.id end) %>
+<%= if other && other.id in @online_users do %>
+  <p class="text-xs text-green-600 dark:text-green-400 font-medium">● Online</p>
+<% else %>
+  <p class="text-xs text-slate-500 dark:text-slate-400">
+    <%= last_seen_text(other && other.last_seen_at) %>
+  </p>
+<% end %>
+          <% end %>
+        </div>
+      </div>
+
+      <div id="messages" phx-hook="ScrollToBottom" class="flex-1 overflow-y-auto px-4 py-5 space-y-4">
+        <%= for message <- @messages do %>
+          <% deleted = ViraChat.Chat.Message.deleted?(message) %>
+          <% edited = ViraChat.Chat.Message.edited?(message) %>
+          <% is_mine = message.user_id == @current_user.id %>
+          <% is_editing = @editing_message_id == message.id %>
+
+          <div
+            id={"message-#{message.id}"}
+            class={"flex gap-2 group #{if is_mine, do: "justify-end", else: "justify-start"}"}
+          >
+            <%= if !is_mine do %>
+              <%= if message.user.avatar_url do %>
+                <img src={message.user.avatar_url} class="w-8 h-8 rounded-full object-cover flex-shrink-0 self-end" />
+              <% else %>
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 self-end">
+                  <%= String.first(message.user.email) |> String.upcase() %>
+                </div>
+              <% end %>
+            <% end %>
+
+            <div class={"max-w-[80%] sm:max-w-md flex flex-col #{if is_mine, do: "items-end", else: "items-start"}"}>
+              <%= if is_editing do %>
+                <.form for={@edit_form} phx-submit="save_edit" class="flex flex-col gap-2 w-full">
+                  <textarea
+                    name="content"
+                    rows="2"
+                    autofocus
+                    class="w-full px-3 py-2 border border-indigo-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white dark:bg-slate-800"
+                  ><%= @edit_form[:content].value %></textarea>
+                  <div class="flex gap-2 justify-end">
+                    <button type="button" phx-click="cancel_edit" class="px-3 py-1 text-sm text-slate-600 dark:text-slate-400 hover:underline">Cancel</button>
+                    <button type="submit" class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Save</button>
+                  </div>
+                </.form>
+              <% else %>
+                <div class={"relative px-4 py-2.5 rounded-2xl shadow-sm #{if deleted, do: "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 italic border border-slate-200 dark:border-slate-700", else: (if is_mine, do: "bg-indigo-600 text-white", else: "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700")}"}>
+                  <%= if message.reply_to do %>
+                    <a
+                      href={"#message-#{message.reply_to.id}"}
+                      class={"block mb-2 text-xs rounded-lg px-2.5 py-1.5 border-l-2 #{if is_mine && !deleted, do: "bg-indigo-500/40 border-indigo-200", else: "bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600"}"}
+                    >
+                      <div class={"font-semibold #{if is_mine && !deleted, do: "text-white", else: "text-slate-700 dark:text-slate-200"}"}>
+                        <%= ViraChat.Accounts.User.display_name(message.reply_to.user) %>
+                      </div>
+                      <div class={"truncate #{if is_mine && !deleted, do: "text-white/80", else: "text-slate-500 dark:text-slate-400"}"}>
+                        <%= cond do %>
+                          <% message.reply_to.deleted_at -> %>This message was deleted
+                          <% message.reply_to.content && message.reply_to.content != "" -> %><%= message.reply_to.content %>
+                          <% message.reply_to.media_url -> %>📎 Attachment
+                          <% true -> %>(empty)
+                        <% end %>
+                      </div>
+                    </a>
+                  <% end %>
+
+                  <div class={"text-xs font-semibold mb-1 #{if deleted, do: "hidden", else: "opacity-75"}"}>
+                    <%= ViraChat.Accounts.User.display_name(message.user) %>
+                  </div>
+
+                  <%= if deleted do %>
+                    <div>🚫 This message was deleted</div>
+                  <% else %>
+                    <%= if message.media_url do %>
+                      <%= if audio_url?(message.media_url) do %>
+                        <audio controls class="w-64 max-w-full mb-1" preload="metadata">
+                          <source src={message.media_url} />
+                        </audio>
+                      <% else %>
+                        <img src={message.media_url} class="max-w-full rounded-lg mb-1" />
+                      <% end %>
+                    <% end %>
+
+                    <%= if message.content && message.content != "" do %>
+                      <div class="whitespace-pre-wrap break-words leading-relaxed">
+                        <%= render_with_mentions(message.content, @active_conversation.users, is_mine) %>
+                      </div>
+                    <% end %>
+                  <% end %>
+
+                  <div class={"text-xs mt-1.5 flex items-center gap-1 #{if deleted, do: "opacity-60", else: "opacity-70"}"}>
+                    <span><%= Calendar.strftime(message.inserted_at, "%H:%M") %></span>
+                    <%= if edited && !deleted do %><span>· edited</span><% end %>
+                    <%= if is_mine && !deleted do %>
+                      <%= if message_seen?(message, @active_conversation, @current_user, @readers) do %>
+                        <span title="Seen" class="text-indigo-200 font-bold">✓✓</span>
+                      <% else %>
+                        <span title="Sent" class="opacity-70">✓</span>
+                      <% end %>
+                    <% end %>
+                  </div>
+
+                  <%= if !deleted do %>
+                    <div class="absolute -top-3 right-2 hidden group-hover:flex gap-0.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-md">
+                      <%= for e <- ["👍", "❤️", "😂", "😮"] do %>
+                        <button
+                          phx-click="react"
+                          phx-value-id={message.id}
+                          phx-value-emoji={e}
+                          title={"React " <> e}
+                          class="px-1.5 py-1 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 first:rounded-l-lg"
+                        ><%= e %></button>
+                      <% end %>
+                      <button
+                        phx-click="start_reply"
+                        phx-value-id={message.id}
+                        title="Reply"
+                        class="px-2 py-1 text-xs text-slate-600 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400"
+                      >↩</button>
+                      <%= if is_mine do %>
+                        <button
+                          phx-click="start_edit"
+                          phx-value-id={message.id}
+                          title="Edit"
+                          class="px-2 py-1 text-xs text-slate-600 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400"
+                        >✏️</button>
+                        <button
+                          phx-click="delete_message"
+                          phx-value-id={message.id}
+                          data-confirm="Delete this message?"
+                          title="Delete"
+                          class="px-2 py-1 text-xs text-slate-600 dark:text-slate-200 hover:text-red-600 dark:hover:text-red-400 rounded-r-lg"
+                        >🗑️</button>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+              <% end %>
+
+              <% groups = reaction_groups(message.reactions || [], @current_user) %>
+              <%= if groups != [] do %>
+                <div class="flex flex-wrap gap-1 mt-1">
+                  <%= for r <- groups do %>
+                    <button
+                      type="button"
+                      phx-click="react"
+                      phx-value-id={message.id}
+                      phx-value-emoji={r.emoji}
+                      title={Enum.join(r.users, ", ")}
+                      class={"inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition #{if r.me?, do: "bg-indigo-100 dark:bg-indigo-900/40 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300", else: "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"}"}
+                    >
+                      <span><%= r.emoji %></span>
+                      <%= if r.count > 1 do %>
+                        <span class="font-medium"><%= r.count %></span>
+                      <% end %>
+                    </button>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <%= if @typing_users != [] do %>
+        <div class="px-5 py-2 text-xs text-slate-500 dark:text-slate-400 italic flex-shrink-0">
+          <%= case @typing_users do %>
+            <% [user] -> %><%= user.name %> is typing...
+            <% users -> %><%= Enum.map_join(users, ", ", & &1.name) %> are typing...
+          <% end %>
+        </div>
+      <% end %>
+
+      <div class="px-4 py-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex-shrink-0">
+        <%= if @reply_to do %>
+          <div class="mb-2.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 border-l-4 border-indigo-500 rounded-lg flex items-center gap-2">
+            <div class="flex-1 min-w-0">
+              <div class="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                Replying to <%= ViraChat.Accounts.User.display_name(@reply_to.user) %>
+              </div>
+              <div class="text-sm text-slate-500 dark:text-slate-400 truncate">
+                <%= cond do %>
+                  <% @reply_to.deleted_at -> %>This message was deleted
+                  <% @reply_to.content && @reply_to.content != "" -> %><%= @reply_to.content %>
+                  <% @reply_to.media_url -> %>📎 Attachment
+                  <% true -> %>(empty)
+                <% end %>
+              </div>
+            </div>
+            <button phx-click="cancel_reply" class="text-slate-500 dark:text-slate-400 hover:text-red-500 text-xl leading-none">✕</button>
+          </div>
+        <% end %>
+
+        <%= if @uploads.image.entries != [] do %>
+          <div class="mb-2 text-sm text-slate-500 dark:text-slate-400">
+            <%= for entry <- @uploads.image.entries do %>
+              <span class="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
+                <%= entry.client_name %>
+                <button type="button" phx-click="cancel-upload" phx-value-ref={entry.ref} class="text-red-500 dark:text-red-400">✕</button>
+              </span>
+            <% end %>
+          </div>
+        <% end %>
+
+        <%= if @uploads.audio.entries != [] do %>
+          <div class="mb-2 text-sm text-slate-500 dark:text-slate-400">
+            <%= for entry <- @uploads.audio.entries do %>
+              <span class="inline-flex items-center gap-2 bg-red-50 dark:bg-red-900/30 px-3 py-1.5 rounded-full">
+                🎤 <%= entry.client_name %>
+                <button type="button" phx-click="cancel-audio" phx-value-ref={entry.ref} class="text-red-500 dark:text-red-400">✕</button>
+              </span>
+            <% end %>
+          </div>
+        <% end %>
+
+        <div id="mention-autocomplete" phx-hook="MentionAutocomplete" phx-update="ignore" class="relative">
+          <div data-mention-panel class="hidden absolute bottom-16 left-12 w-56 max-h-48 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-1 z-30">
+            <div class="px-3 py-1 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Mention someone</div>
+            <%= for u <- @active_conversation.users do %>
+              <%= if u.id != @current_user.id do %>
+                <button
+                  type="button"
+                  data-mention-name={ViraChat.Accounts.User.display_name(u)}
+                  class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
+                >
+                  <%= if u.avatar_url do %>
+                    <img src={u.avatar_url} class="w-6 h-6 rounded-full object-cover" />
+                  <% else %>
+                    <div class="w-6 h-6 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">
+                      <%= String.first(u.email) |> String.upcase() %>
+                    </div>
+                  <% end %>
+                  <span><%= ViraChat.Accounts.User.display_name(u) %></span>
+                </button>
+              <% end %>
+            <% end %>
+          </div>
+
+          <.form for={@message_form} phx-submit="send_message" phx-change="validate" class="flex gap-1.5 sm:gap-2 items-center">
+            <label class="cursor-pointer w-10 h-10 flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition flex-shrink-0">
+              <span class="text-xl">📎</span>
+              <.live_file_input upload={@uploads.image} class="hidden" />
+            </label>
+
+            <div class="flex items-center gap-1">
+              <.live_file_input upload={@uploads.audio} class="hidden" />
+              <div id="voice-recorder" phx-hook="VoiceRecorder" phx-update="ignore" class="flex items-center gap-1">
+                <button
+                  type="button"
+                  data-record-toggle
+                  title="Record voice message"
+                  class="w-10 h-10 flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xl"
+                >🎤</button>
+                <div data-record-indicator class="hidden flex items-center gap-2 bg-red-50 dark:bg-red-900/30 px-3 py-1.5 rounded-full">
+                  <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                  <span data-record-timer class="text-sm font-mono text-red-600 dark:text-red-400">00:00</span>
+                  <button type="button" data-record-stop class="text-xs font-medium text-red-600 dark:text-red-400 hover:underline">Stop</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="emoji-picker-wrapper" phx-hook="EmojiPicker" phx-update="ignore" class="relative">
+              <button
+                type="button"
+                data-emoji-toggle
+                class="w-10 h-10 flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xl"
+              >😊</button>
+              <div data-emoji-panel class="hidden absolute bottom-14 left-0 w-72 h-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-3 overflow-y-auto z-20">
+                <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Smileys</div>
+                <div class="grid grid-cols-8 gap-1 mb-3">
+                  <%= for e <- ~w(😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 😉 😍 🥰 😘 😗 😙 😚 😋 😛 😜 🤪 😝 🤗 🤔 🤨 😐 😑 😶 🙄 😏 😴 😪 😌 😔 🤤 😷 🤒 🤕 🥳 🥺 😢 😭 😤 😠 😡 🤯 😳 🥵 🥶 😱 😨 😰 😥 😓 🤝 🙏 👏 👍 👎 👌 ✌️ 🤞 🤟 🤘 👋 🤚 🖐️ ✋ 🖖) do %>
+                    <button type="button" data-emoji={e} class="text-2xl hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg p-1 leading-none"><%= e %></button>
+                  <% end %>
+                </div>
+                <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Hearts & Symbols</div>
+                <div class="grid grid-cols-8 gap-1">
+                  <%= for e <- ~w(❤️ 🧡 💛 💚 💙 💜 🖤 🤍 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 ✨ ⭐ 🌟 💫 🔥 💯 🎉 🎊 🎈 🎁 🔔 💬 📌 ✅ ❌ ⚠️) do %>
+                    <button type="button" data-emoji={e} class="text-2xl hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg p-1 leading-none"><%= e %></button>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+
+            <input
+              type="text"
+              name="content"
+              value={@message_form[:content].value}
+              placeholder="Type a message..."
+              autocomplete="off"
+              phx-keyup="typing"
+              phx-debounce="500"
+              class="flex-1 min-w-0 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-500"
+            />
+            <button type="submit" class="w-11 h-11 flex items-center justify-center bg-indigo-600 text-white rounded-full hover:bg-indigo-700 active:scale-95 transition flex-shrink-0">
+              <span class="text-lg">➤</span>
+            </button>
+          </.form>
+        </div>
+      </div>
+    <% else %>
+      <div class="flex-1 flex items-center justify-center text-slate-400 dark:text-slate-600">
+        <div class="text-center">
+          <div class="w-20 h-20 mx-auto mb-4 rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-4xl shadow-lg shadow-indigo-500/20">💬</div>
+          <p class="text-lg font-medium text-slate-600 dark:text-slate-300">No conversation open</p>
+          <p class="text-sm mt-1">Select a chat or start a new one</p>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

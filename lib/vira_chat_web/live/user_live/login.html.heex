@@ -1,0 +1,76 @@
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 px-4 py-12">
+  <div class="w-full max-w-md">
+    <div class="text-center mb-8">
+      <.link navigate={~p"/"} class="inline-flex items-center gap-2">
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl">V</div>
+        <span class="text-2xl font-bold text-gray-900">ViraChat</span>
+      </.link>
+      <h1 class="text-2xl font-bold text-gray-900 mt-6">Welcome back</h1>
+      <p class="text-gray-500 text-sm mt-1">Log in to continue your conversations</p>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-xl shadow-slate-900/5 border border-gray-100 p-8">
+      <.flash_group flash={@flash} />
+
+      <.form for={@form} id="login_form" action={~p"/users/log-in"} phx-submit="submit" class="space-y-5">
+        <div>
+          <label for={@form[:email].id} class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <input
+            type="email"
+            name={@form[:email].name}
+            id={@form[:email].id}
+            value={@form[:email].value}
+            required
+            autofocus
+            autocomplete="username"
+            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="you@example.com"
+          />
+          <p :if={@form[:email].errors} class="mt-1 text-xs text-red-600">
+            <%= translate_errors(@form[:email].errors) %>
+          </p>
+        </div>
+
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label for={@form[:password].id} class="block text-sm font-medium text-gray-700">Password</label>
+            <.link navigate={~p"/users/reset-password"} class="text-xs text-blue-600 hover:underline">Forgot?</.link>
+          </div>
+          <input
+            type="password"
+            name={@form[:password].name}
+            id={@form[:password].id}
+            value={@form[:password].value}
+            required
+            autocomplete="current-password"
+            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="••••••••"
+          />
+          <p :if={@form[:password].errors} class="mt-1 text-xs text-red-600">
+            <%= translate_errors(@form[:password].errors) %>
+          </p>
+        </div>
+
+        <label class="flex items-center gap-2 text-sm text-gray-600">
+          <input type="checkbox" name={@form[:remember_me].name} value="true" checked={@form[:remember_me].value == "true"} class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+          Remember me for 14 days
+        </label>
+
+        <button type="submit" class="w-full py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition">
+          Log in
+        </button>
+      </.form>
+
+      <.form :if={local_mail_adapter?()} for={@form} id="magic_form" action={~p"/users/log-in"} phx-submit="submit_magic" class="mt-4">
+        <button type="submit" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">
+          Send me a magic link instead
+        </button>
+      </.form>
+    </div>
+
+    <p class="text-center text-sm text-gray-500 mt-6">
+      New to ViraChat?
+      <.link navigate={~p"/users/register"} class="text-blue-600 hover:underline font-medium">Create an account</.link>
+    </p>
+  </div>
+</div>
