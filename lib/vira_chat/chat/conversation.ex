@@ -20,4 +20,22 @@ defmodule ViraChat.Chat.Conversation do
     |> cast(attrs, [:type, :title])
     |> validate_required([:type])
   end
+
+  @group_gradients [
+  "from-violet-500 to-purple-600",
+  "from-fuchsia-500 to-pink-600",
+  "from-rose-500 to-red-600",
+  "from-amber-500 to-orange-600",
+  "from-emerald-500 to-teal-600",
+  "from-cyan-500 to-blue-600",
+  "from-indigo-500 to-violet-600"
+]
+
+def group_gradient(%__MODULE__{id: id}) when is_integer(id) do
+  idx = rem(id, length(@group_gradients))
+  Enum.at(@group_gradients, idx)
+end
+
+def group_gradient(_), do: "from-violet-500 to-purple-600"
+
 end

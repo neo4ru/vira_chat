@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # ViraChat
 
 To start your Phoenix server:
@@ -16,3 +17,7 @@ Ready to run in production? Please [check our deployment guides](https://hexdocs
 * Docs: https://hexdocs.pm/phoenix
 * Forum: https://elixirforum.com/c/phoenix-forum
 * Source: https://github.com/phoenixframework/phoenix
+=======
+# vira_chat
+vira chat is massaging 
+>>>>>>> ecc8790f4ba7b5e6373d810c752e8aa6d78779ba

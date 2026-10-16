@@ -51,8 +51,10 @@ end
       live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
 
       live "/users/profile", ProfileLive, :edit
+      live "/starred", StarredLive, :index
       live "/chat", ChatLive, :index
       live "/chat/:id", ChatLive, :show
+
     end
 
     live_session :admin,
@@ -64,6 +66,7 @@ end
   live "/admin/users", AdminLive.Users, :index
   live "/admin/conversations", AdminLive.Conversations, :index
   live "/admin/audit", AdminLive.Audit, :index
+  live "/admin/reports", AdminLive.Reports, :index
 end
 
     post "/users/update-password", UserSessionController, :update_password

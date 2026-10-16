@@ -160,5 +160,27 @@ def role_label(%__MODULE__{role: "superuser"}), do: "Superuser"
 def role_label(%__MODULE__{role: "admin"}), do: "Admin"
 def role_label(%__MODULE__{}), do: "User"
 
+# Returns a Tailwind gradient string based on the user's ID.
+# Deterministic: the same user always gets the same color.
+@avatar_gradients [
+  "from-indigo-500 to-blue-600",
+  "from-violet-500 to-purple-600",
+  "from-pink-500 to-rose-600",
+  "from-emerald-500 to-teal-600",
+  "from-amber-500 to-orange-600",
+  "from-cyan-500 to-blue-600",
+  "from-fuchsia-500 to-pink-600",
+  "from-lime-500 to-emerald-600",
+  "from-rose-500 to-red-600",
+  "from-sky-500 to-indigo-600"
+]
+
+def avatar_gradient(%__MODULE__{id: id}) when is_integer(id) do
+  idx = rem(id, length(@avatar_gradients))
+  Enum.at(@avatar_gradients, idx)
+end
+
+def avatar_gradient(_), do: "from-indigo-500 to-blue-600"
+
 
 end

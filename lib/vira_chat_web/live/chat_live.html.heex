@@ -7,37 +7,18 @@
         <h1 class="text-lg font-bold text-slate-800 dark:text-slate-100">ViraChat</h1>
       </div>
       <div class="flex gap-1">
-        <button
-          phx-click="toggle_new_chat"
-          title="New chat"
-          class="w-9 h-9 flex items-center justify-center rounded-lg text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-800 text-xl font-bold"
-        >+</button>
-        <button
-          phx-click="toggle_new_group"
-          title="New group"
-          class="w-9 h-9 flex items-center justify-center rounded-lg text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-800 text-lg"
-        >👥</button>
+        <button phx-click="open_starred" title="Starred messages" class="w-9 h-9 flex items-center justify-center rounded-lg text-amber-500 hover:bg-amber-50 dark:hover:bg-slate-800 text-lg">⭐</button>
+        <button phx-click="toggle_new_chat" title="New chat" class="w-9 h-9 flex items-center justify-center rounded-lg text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-800 text-xl font-bold">+</button>
+        <button phx-click="toggle_new_group" title="New group" class="w-9 h-9 flex items-center justify-center rounded-lg text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-800 text-lg">👥</button>
       </div>
     </div>
 
     <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800">
       <form phx-change="search" phx-submit="search" class="relative">
-        <input
-          type="text"
-          name="query"
-          value={@search_query}
-          placeholder="Search messages..."
-          autocomplete="off"
-          phx-debounce="300"
-          class="w-full pl-9 pr-9 py-2.5 text-sm bg-slate-100 dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-500"
-        />
+        <input type="text" name="query" value={@search_query} placeholder="Search messages..." autocomplete="off" phx-debounce="300" class="w-full pl-9 pr-9 py-2.5 text-sm bg-slate-100 dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-500" />
         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
         <%= if @search_query != "" do %>
-          <button
-            type="button"
-            phx-click="clear_search"
-            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm"
-          >✕</button>
+          <button type="button" phx-click="clear_search" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm">✕</button>
         <% end %>
       </form>
     </div>
@@ -47,16 +28,12 @@
         <h2 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Start a new chat</h2>
         <div class="space-y-0.5 max-h-56 overflow-y-auto">
           <%= for user <- @users do %>
-            <button
-              phx-click="start_chat"
-              phx-value-user_id={user.id}
-              class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-sm flex items-center gap-3 text-slate-700 dark:text-slate-200 transition"
-            >
+            <button phx-click="start_chat" phx-value-user_id={user.id} class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-sm flex items-center gap-3 text-slate-700 dark:text-slate-200 transition">
               <span class={"w-2 h-2 rounded-full flex-shrink-0 #{if user.id in @online_users, do: "bg-green-500", else: "bg-slate-300 dark:bg-slate-600"}"}></span>
               <%= if user.avatar_url do %>
                 <img src={user.avatar_url} class="w-8 h-8 rounded-full object-cover" />
               <% else %>
-                <div class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs font-bold">
+                <div class={"w-8 h-8 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold #{ViraChat.Accounts.User.avatar_gradient(user)}"}>
                   <%= String.first(user.email) |> String.upcase() %>
                 </div>
               <% end %>
@@ -71,65 +48,38 @@
       <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-indigo-50 dark:bg-indigo-950/40">
         <h2 class="text-xs font-semibold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider mb-3">New group</h2>
         <form phx-change="update_group_title">
-          <input
-            type="text"
-            name="value"
-            placeholder="Group name"
-            value={@group_title}
-            autocomplete="off"
-            class="w-full px-3 py-2 mb-3 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
+          <input type="text" name="value" placeholder="Group name" value={@group_title} autocomplete="off" class="w-full px-3 py-2 mb-3 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </form>
         <div class="text-xs text-slate-500 dark:text-slate-400 mb-2">Select members</div>
         <div class="space-y-0.5 max-h-56 overflow-y-auto mb-3">
           <%= for user <- @users do %>
             <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-800 cursor-pointer text-sm text-slate-700 dark:text-slate-200">
-              <input
-                type="checkbox"
-                checked={user.id in @group_members}
-                phx-click="toggle_group_member"
-                phx-value-user_id={user.id}
-                class="rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500"
-              />
+              <input type="checkbox" checked={user.id in @group_members} phx-click="toggle_group_member" phx-value-user_id={user.id} class="rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500" />
               <span><%= ViraChat.Accounts.User.display_name(user) %></span>
             </label>
           <% end %>
         </div>
-        <button
-          phx-click="create_group"
-          class="w-full px-3 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition"
-        >Create group</button>
+        <button phx-click="create_group" class="w-full px-3 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">Create group</button>
       </div>
     <% end %>
 
     <div class="flex-1 overflow-y-auto">
       <%= if @search_query != "" do %>
         <div class="px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800">
-          <%= if @search_results == [] do %>
-            No results
-          <% else %>
-            <%= length(@search_results) %> result<%= if length(@search_results) != 1, do: "s" %>
-          <% end %>
+          <%= if @search_results == [] do %>No results<% else %><%= length(@search_results) %> result<%= if length(@search_results) != 1, do: "s" %><% end %>
         </div>
         <%= for message <- @search_results do %>
-          <.link
-            patch={~p"/chat/#{message.conversation_id}"}
-            class="block px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition"
-          >
+          <.link patch={~p"/chat/#{message.conversation_id}"} class="block px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
             <div class="flex items-center gap-2 mb-1.5">
               <%= if message.user.avatar_url do %>
                 <img src={message.user.avatar_url} class="w-5 h-5 rounded-full object-cover" />
               <% else %>
-                <div class="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-white text-[10px] font-bold">
+                <div class={"w-5 h-5 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-[10px] font-bold #{ViraChat.Accounts.User.avatar_gradient(message.user)}"}>
                   <%= String.first(message.user.email) |> String.upcase() %>
                 </div>
               <% end %>
-              <span class="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">
-                <%= ViraChat.Accounts.User.display_name(message.user) %>
-              </span>
-              <span class="text-xs text-slate-400 dark:text-slate-500 ml-auto flex-shrink-0">
-                <%= Calendar.strftime(message.inserted_at, "%b %d") %>
-              </span>
+              <span class="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate"><%= ViraChat.Accounts.User.display_name(message.user) %></span>
+              <span class="text-xs text-slate-400 dark:text-slate-500 ml-auto flex-shrink-0"><%= Calendar.strftime(message.inserted_at, "%b %d") %></span>
             </div>
             <div class="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 break-words">
               <%= highlight(message.content, @search_query) %>
@@ -137,29 +87,70 @@
           </.link>
         <% end %>
       <% else %>
-        <%= for conversation <- @conversations do %>
+        <% visible = Enum.filter(@conversations, fn c ->
+             archived = c.participant && c.participant.archived_at
+             if @show_archived, do: archived, else: is_nil(archived)
+           end) %>
+        <% pinned = Enum.filter(visible, fn c -> c.participant && c.participant.pinned_at end) %>
+        <% unpinned = Enum.reject(visible, fn c -> c.participant && c.participant.pinned_at end) %>
+
+        <%= if pinned != [] do %>
+          <div class="px-5 py-2 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">📌 Pinned</div>
+        <% end %>
+
+        <%= for conversation <- pinned ++ unpinned do %>
           <% unread = Map.get(@unread_counts, conversation.id, 0) %>
           <% avatar = conversation_avatar(conversation, @current_user) %>
-          <.link
-            patch={~p"/chat/#{conversation.id}"}
-            class={"block px-4 py-3.5 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex items-center gap-3 transition #{if @active_conversation && @active_conversation.id == conversation.id, do: "bg-indigo-50 dark:bg-indigo-950/40", else: ""}"}
-          >
-            <%= if avatar do %>
-              <img src={avatar} class="w-11 h-11 rounded-full object-cover flex-shrink-0" />
-            <% else %>
-              <div class={"w-11 h-11 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 #{if conversation.type == "group", do: "bg-gradient-to-br from-violet-500 to-purple-600", else: "bg-gradient-to-br from-indigo-500 to-blue-600"}"}>
-                <%= String.first(conversation_title(conversation, @current_user)) |> String.upcase() %>
+          <% is_group = conversation.type == "group" %>
+          <% muted = conversation.participant && conversation.participant.muted_at %>
+          <% menu_open = @show_menu_for == conversation.id %>
+
+          <div class="relative group">
+            <.link patch={~p"/chat/#{conversation.id}"} class={"block px-4 py-3.5 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex items-center gap-3 transition #{if @active_conversation && @active_conversation.id == conversation.id, do: "bg-indigo-50 dark:bg-indigo-950/40", else: ""}"}>
+              <%= if avatar do %>
+                <img src={avatar} class="w-11 h-11 rounded-full object-cover flex-shrink-0" />
+              <% else %>
+                <% other = if !is_group, do: Enum.find(conversation.users, fn u -> u.id != @current_user.id end), else: nil %>
+                <div class={"w-11 h-11 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-sm font-bold flex-shrink-0 #{if is_group, do: ViraChat.Chat.Conversation.group_gradient(conversation), else: ViraChat.Accounts.User.avatar_gradient(other)}"}>
+                  <%= String.first(conversation_title(conversation, @current_user)) |> String.upcase() %>
+                </div>
+              <% end %>
+              <div class={"flex-1 truncate pr-6 #{if unread > 0 && !muted, do: "text-slate-900 dark:text-white font-semibold", else: "text-slate-700 dark:text-slate-200 font-medium"}"}>
+                <%= conversation_title(conversation, @current_user) %>
+              </div>
+              <%= if unread > 0 && !muted do %>
+                <span class="bg-indigo-600 text-white text-xs font-bold rounded-full px-2 py-0.5 min-w-[1.35rem] text-center flex-shrink-0"><%= if unread > 99, do: "99+", else: unread %></span>
+              <% end %>
+              <%= if muted do %><span class="text-xs text-slate-400 dark:text-slate-500 flex-shrink-0">🔕</span><% end %>
+            </.link>
+
+            <button type="button" phx-click="open_menu" phx-value-id={conversation.id} class={"absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition #{if menu_open, do: "opacity-100 bg-slate-100 dark:bg-slate-700", else: "opacity-0 group-hover:opacity-100"}"}>⋯</button>
+
+            <%= if menu_open do %>
+              <div class="absolute right-2 top-14 z-30 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl py-1 text-sm">
+                <button type="button" phx-click="toggle_mute" phx-value-id={conversation.id} class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-2"><%= if muted, do: "🔔 Unmute", else: "🔕 Mute" %></button>
+                <button type="button" phx-click="toggle_pin" phx-value-id={conversation.id} class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-2"><%= if conversation.participant && conversation.participant.pinned_at, do: "📍 Unpin", else: "📌 Pin" %></button>
+                <button type="button" phx-click="toggle_archive" phx-value-id={conversation.id} class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-2"><%= if conversation.participant && conversation.participant.archived_at, do: "📤 Unarchive", else: "📥 Archive" %></button>
+                <%= if is_group do %>
+                  <div class="border-t border-slate-100 dark:border-slate-700 my-1"></div>
+                  <button type="button" phx-click="leave_group" phx-value-id={conversation.id} data-confirm="Leave this group?" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-red-600 dark:text-red-400 flex items-center gap-2">🚪 Leave group</button>
+                <% else %>
+                  <% other = Enum.find(conversation.users, fn u -> u.id != @current_user.id end) %>
+                  <%= if other do %>
+                    <div class="border-t border-slate-100 dark:border-slate-700 my-1"></div>
+                    <button type="button" phx-click="block_user" phx-value-id={other.id} data-confirm="Block this user? They won't be able to message you." class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-red-600 dark:text-red-400 flex items-center gap-2">🚫 Block user</button>
+                  <% end %>
+                <% end %>
               </div>
             <% end %>
-            <div class={"flex-1 truncate #{if unread > 0, do: "text-slate-900 dark:text-white font-semibold", else: "text-slate-700 dark:text-slate-200 font-medium"}"}>
-              <%= conversation_title(conversation, @current_user) %>
-            </div>
-            <%= if unread > 0 do %>
-              <span class="bg-indigo-600 text-white text-xs font-bold rounded-full px-2 py-0.5 min-w-[1.35rem] text-center flex-shrink-0">
-                <%= if unread > 99, do: "99+", else: unread %>
-              </span>
-            <% end %>
-          </.link>
+          </div>
+        <% end %>
+
+        <% archived_count = Enum.count(@conversations, fn c -> c.participant && c.participant.archived_at end) %>
+        <%= if archived_count > 0 || @show_archived do %>
+          <button type="button" phx-click="toggle_show_archived" class="w-full text-center px-4 py-3 text-xs text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 border-b border-slate-100 dark:border-slate-800">
+            <%= if @show_archived, do: "← Back to inbox", else: "📥 Archived (#{archived_count})" %>
+          </button>
         <% end %>
       <% end %>
     </div>
@@ -167,35 +158,22 @@
     <div class="border-t border-slate-200 dark:border-slate-800">
       <%= if !@push_enabled do %>
         <div class="px-3 pt-3">
-          <button
-            type="button"
-            id="enable-push-btn"
-            phx-hook="EnablePush"
-            class="w-full text-sm bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 transition"
-          >🔔 Enable notifications</button>
+          <button type="button" id="enable-push-btn" phx-hook="EnablePush" class="w-full text-sm bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 transition">🔔 Enable notifications</button>
         </div>
       <% end %>
       <div class="px-3 pt-2">
-        <button
-          type="button"
-          id="theme-toggle"
-          phx-hook="Theme"
-          phx-update="ignore"
-          class="w-full text-sm bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 transition"
-        >🌓 Toggle dark mode</button>
+        <button type="button" id="theme-toggle" phx-hook="Theme" phx-update="ignore" class="w-full text-sm bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 transition">🌓 Toggle dark mode</button>
       </div>
       <div class="px-4 py-3 flex items-center gap-3">
         <.link navigate={~p"/users/profile"} class="flex items-center gap-2.5 flex-1 min-w-0 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 px-2 py-1.5 -mx-2 transition">
           <%= if @current_user.avatar_url do %>
             <img src={@current_user.avatar_url} class="w-9 h-9 rounded-full object-cover flex-shrink-0" />
           <% else %>
-            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+            <div class={"w-9 h-9 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold flex-shrink-0 #{ViraChat.Accounts.User.avatar_gradient(@current_user)}"}>
               <%= String.first(@current_user.email) |> String.upcase() %>
             </div>
           <% end %>
-          <span class="text-sm text-slate-700 dark:text-slate-300 truncate font-medium">
-            <%= ViraChat.Accounts.User.display_name(@current_user) %>
-          </span>
+          <span class="text-sm text-slate-700 dark:text-slate-300 truncate font-medium"><%= ViraChat.Accounts.User.display_name(@current_user) %></span>
         </.link>
         <.link href={~p"/users/log-out"} method="delete" class="text-sm text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 flex-shrink-0 transition">Log out</.link>
       </div>
@@ -206,192 +184,179 @@
   <div class={"#{if @active_conversation, do: "flex", else: "hidden md:flex"} flex-1 flex-col bg-slate-50 dark:bg-slate-950 min-w-0"}>
     <%= if @active_conversation do %>
       <% header_avatar = conversation_avatar(@active_conversation, @current_user) %>
+      <% is_group_header = @active_conversation.type == "group" %>
       <div class="px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 flex-shrink-0">
-        <button
-          phx-click="close_conversation"
-          class="md:hidden w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 -ml-1"
-          title="Back"
-        >←</button>
+        <button phx-click="close_conversation" class="md:hidden w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 -ml-1" title="Back">←</button>
         <%= if header_avatar do %>
           <img src={header_avatar} class="w-10 h-10 rounded-full object-cover flex-shrink-0" />
         <% else %>
-          <div class={"w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 #{if @active_conversation.type == "group", do: "bg-gradient-to-br from-violet-500 to-purple-600", else: "bg-gradient-to-br from-indigo-500 to-blue-600"}"}>
+          <% header_other = if !is_group_header, do: Enum.find(@active_conversation.users, fn u -> u.id != @current_user.id end), else: nil %>
+          <div class={"w-10 h-10 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-sm font-bold flex-shrink-0 #{if is_group_header, do: ViraChat.Chat.Conversation.group_gradient(@active_conversation), else: ViraChat.Accounts.User.avatar_gradient(header_other)}"}>
             <%= String.first(conversation_title(@active_conversation, @current_user)) |> String.upcase() %>
           </div>
         <% end %>
         <div class="flex-1 min-w-0">
-          <h2 class="text-base font-semibold text-slate-800 dark:text-slate-100 truncate">
-            <%= conversation_title(@active_conversation, @current_user) %>
-          </h2>
-          <%= if @active_conversation.type == "group" do %>
-            <p class="text-xs text-slate-500 dark:text-slate-400 truncate">
-              <%= Enum.map_join(@active_conversation.users, ", ", &ViraChat.Accounts.User.display_name/1) %>
-            </p>
+          <h2 class="text-base font-semibold text-slate-800 dark:text-slate-100 truncate"><%= conversation_title(@active_conversation, @current_user) %></h2>
+          <%= if is_group_header do %>
+            <p class="text-xs text-slate-500 dark:text-slate-400 truncate"><%= Enum.map_join(@active_conversation.users, ", ", &ViraChat.Accounts.User.display_name/1) %></p>
           <% else %>
             <% other = Enum.find(@active_conversation.users, fn u -> u.id != @current_user.id end) %>
-<%= if other && other.id in @online_users do %>
-  <p class="text-xs text-green-600 dark:text-green-400 font-medium">● Online</p>
-<% else %>
-  <p class="text-xs text-slate-500 dark:text-slate-400">
-    <%= last_seen_text(other && other.last_seen_at) %>
-  </p>
-<% end %>
+            <%= if other && other.id in @online_users do %>
+              <p class="text-xs text-green-600 dark:text-green-400 font-medium">● Online</p>
+            <% else %>
+              <p class="text-xs text-slate-500 dark:text-slate-400"><%= last_seen_text(other && other.last_seen_at) %></p>
+            <% end %>
           <% end %>
         </div>
       </div>
 
-      <div id="messages" phx-hook="ScrollToBottom" class="flex-1 overflow-y-auto px-4 py-5 space-y-4">
-        <%= for message <- @messages do %>
-          <% deleted = ViraChat.Chat.Message.deleted?(message) %>
-          <% edited = ViraChat.Chat.Message.edited?(message) %>
-          <% is_mine = message.user_id == @current_user.id %>
-          <% is_editing = @editing_message_id == message.id %>
+      <div class="relative flex-1 min-h-0">
+        <div id="messages" phx-hook="ScrollToBottom" class="h-full overflow-y-auto px-4 py-5 space-y-4">
+          <%= for message <- @messages do %>
+            <% deleted = ViraChat.Chat.Message.deleted?(message) %>
+            <% edited = ViraChat.Chat.Message.edited?(message) %>
+            <% is_mine = message.user_id == @current_user.id %>
+            <% is_editing = @editing_message_id == message.id %>
+            <% is_starred = MapSet.member?(@starred_message_ids, message.id) %>
 
-          <div
-            id={"message-#{message.id}"}
-            class={"flex gap-2 group #{if is_mine, do: "justify-end", else: "justify-start"}"}
-          >
-            <%= if !is_mine do %>
-              <%= if message.user.avatar_url do %>
-                <img src={message.user.avatar_url} class="w-8 h-8 rounded-full object-cover flex-shrink-0 self-end" />
-              <% else %>
-                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 self-end">
-                  <%= String.first(message.user.email) |> String.upcase() %>
-                </div>
+            <div id={"message-#{message.id}"} class={"flex gap-2 group #{if is_mine, do: "justify-end", else: "justify-start"}"}>
+              <%= if !is_mine do %>
+                <%= if message.user.avatar_url do %>
+                  <img src={message.user.avatar_url} class="w-8 h-8 rounded-full object-cover flex-shrink-0 self-end" />
+                <% else %>
+                  <div class={"w-8 h-8 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold flex-shrink-0 self-end #{ViraChat.Accounts.User.avatar_gradient(message.user)}"}>
+                    <%= String.first(message.user.email) |> String.upcase() %>
+                  </div>
+                <% end %>
               <% end %>
-            <% end %>
 
-            <div class={"max-w-[80%] sm:max-w-md flex flex-col #{if is_mine, do: "items-end", else: "items-start"}"}>
-              <%= if is_editing do %>
-                <.form for={@edit_form} phx-submit="save_edit" class="flex flex-col gap-2 w-full">
-                  <textarea
-                    name="content"
-                    rows="2"
-                    autofocus
-                    class="w-full px-3 py-2 border border-indigo-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white dark:bg-slate-800"
-                  ><%= @edit_form[:content].value %></textarea>
-                  <div class="flex gap-2 justify-end">
-                    <button type="button" phx-click="cancel_edit" class="px-3 py-1 text-sm text-slate-600 dark:text-slate-400 hover:underline">Cancel</button>
-                    <button type="submit" class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Save</button>
-                  </div>
-                </.form>
-              <% else %>
-                <div class={"relative px-4 py-2.5 rounded-2xl shadow-sm #{if deleted, do: "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 italic border border-slate-200 dark:border-slate-700", else: (if is_mine, do: "bg-indigo-600 text-white", else: "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700")}"}>
-                  <%= if message.reply_to do %>
-                    <a
-                      href={"#message-#{message.reply_to.id}"}
-                      class={"block mb-2 text-xs rounded-lg px-2.5 py-1.5 border-l-2 #{if is_mine && !deleted, do: "bg-indigo-500/40 border-indigo-200", else: "bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600"}"}
-                    >
-                      <div class={"font-semibold #{if is_mine && !deleted, do: "text-white", else: "text-slate-700 dark:text-slate-200"}"}>
-                        <%= ViraChat.Accounts.User.display_name(message.reply_to.user) %>
-                      </div>
-                      <div class={"truncate #{if is_mine && !deleted, do: "text-white/80", else: "text-slate-500 dark:text-slate-400"}"}>
-                        <%= cond do %>
-                          <% message.reply_to.deleted_at -> %>This message was deleted
-                          <% message.reply_to.content && message.reply_to.content != "" -> %><%= message.reply_to.content %>
-                          <% message.reply_to.media_url -> %>📎 Attachment
-                          <% true -> %>(empty)
+              <div class={"max-w-[80%] sm:max-w-md flex flex-col #{if is_mine, do: "items-end", else: "items-start"}"}>
+                <%= if is_editing do %>
+                  <.form for={@edit_form} phx-submit="save_edit" class="flex flex-col gap-2 w-full">
+                    <textarea name="content" rows="2" autofocus class="w-full px-3 py-2 border border-indigo-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white dark:bg-slate-800"><%= @edit_form[:content].value %></textarea>
+                    <div class="flex gap-2 justify-end">
+                      <button type="button" phx-click="cancel_edit" class="px-3 py-1 text-sm text-slate-600 dark:text-slate-400 hover:underline">Cancel</button>
+                      <button type="submit" class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Save</button>
+                    </div>
+                  </.form>
+                <% else %>
+                  <div class={"relative px-4 py-2.5 rounded-2xl shadow-sm #{if deleted, do: "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 italic border border-slate-200 dark:border-slate-700", else: (if is_mine, do: "bg-indigo-600 text-white", else: "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700")}"}>
+                    <%= if message.forwarded_from_id do %>
+                      <div class={"text-[10px] italic mb-1 #{if is_mine, do: "text-white/70", else: "text-slate-400 dark:text-slate-500"}"}>↪ Forwarded</div>
+                    <% end %>
+
+                    <%= if message.reply_to do %>
+                      <a href={"#message-#{message.reply_to.id}"} class={"block mb-2 text-xs rounded-lg px-2.5 py-1.5 border-l-2 #{if is_mine && !deleted, do: "bg-indigo-500/40 border-indigo-200", else: "bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600"}"}>
+                        <div class={"font-semibold #{if is_mine && !deleted, do: "text-white", else: "text-slate-700 dark:text-slate-200"}"}><%= ViraChat.Accounts.User.display_name(message.reply_to.user) %></div>
+                        <div class={"truncate #{if is_mine && !deleted, do: "text-white/80", else: "text-slate-500 dark:text-slate-400"}"}>
+                          <%= cond do %>
+                            <% message.reply_to.deleted_at -> %>This message was deleted
+                            <% message.reply_to.content && message.reply_to.content != "" -> %><%= message.reply_to.content %>
+                            <% message.reply_to.media_url -> %>📎 Attachment
+                            <% true -> %>(empty)
+                          <% end %>
+                        </div>
+                      </a>
+                    <% end %>
+
+                    <div class={"text-xs font-semibold mb-1 flex items-center gap-1 #{if deleted, do: "hidden", else: "opacity-75"}"}>
+                      <%= ViraChat.Accounts.User.display_name(message.user) %>
+                      <%= if is_starred do %><span title="Starred">⭐</span><% end %>
+                    </div>
+
+                    <%= if deleted do %>
+                      <div>🚫 This message was deleted</div>
+                    <% else %>
+                      <%= if message.media_url do %>
+                        <%= if audio_url?(message.media_url) do %>
+                          <div id={"audio-wrap-#{message.id}"} phx-hook="AudioSpeed" phx-update="ignore" class="flex items-center gap-2 mb-1">
+                            <audio controls class="w-56 max-w-full" preload="metadata"><source src={message.media_url} /></audio>
+                            <button type="button" data-speed-btn class={"text-xs font-mono px-2 py-1 rounded-md transition #{if is_mine, do: "bg-indigo-500/40 text-white hover:bg-indigo-500/60", else: "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600"}"}>1×</button>
+                          </div>
+                        <% else %>
+                          <img src={message.media_url} phx-hook="ImageLightbox" phx-update="ignore" id={"img-#{message.id}"} class="max-w-full rounded-lg mb-1 cursor-zoom-in hover:brightness-110 transition" />
                         <% end %>
-                      </div>
-                    </a>
-                  <% end %>
+                      <% end %>
 
-                  <div class={"text-xs font-semibold mb-1 #{if deleted, do: "hidden", else: "opacity-75"}"}>
-                    <%= ViraChat.Accounts.User.display_name(message.user) %>
-                  </div>
+                      <%= if message.content && message.content != "" do %>
+                        <div class="whitespace-pre-wrap break-words leading-relaxed">
+                          <%= render_with_mentions(message.content, @active_conversation.users, is_mine) %>
+                        </div>
+                      <% end %>
 
-                  <%= if deleted do %>
-                    <div>🚫 This message was deleted</div>
-                  <% else %>
-                    <%= if message.media_url do %>
-                      <%= if audio_url?(message.media_url) do %>
-                        <audio controls class="w-64 max-w-full mb-1" preload="metadata">
-                          <source src={message.media_url} />
-                        </audio>
-                      <% else %>
-                        <img src={message.media_url} class="max-w-full rounded-lg mb-1" />
+                      <%= if message.link_preview && !deleted do %>
+                        <% preview = message.link_preview %>
+                        <a href={preview["url"]} target="_blank" rel="noopener noreferrer" class={"mt-2 block rounded-lg overflow-hidden border #{if is_mine, do: "bg-indigo-500/40 border-indigo-400/40", else: "bg-slate-50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-600"}"}>
+                          <%= if preview["image"] do %>
+                            <img src={preview["image"]} class="w-full max-h-48 object-cover" />
+                          <% end %>
+                          <div class="p-2.5">
+                            <%= if preview["title"] do %>
+                              <div class={"text-xs font-semibold line-clamp-2 #{if is_mine, do: "text-white", else: "text-slate-800 dark:text-slate-100"}"}><%= preview["title"] %></div>
+                            <% end %>
+                            <%= if preview["description"] do %>
+                              <div class={"text-[11px] mt-1 line-clamp-2 #{if is_mine, do: "text-white/80", else: "text-slate-500 dark:text-slate-400"}"}><%= preview["description"] %></div>
+                            <% end %>
+                          </div>
+                        </a>
                       <% end %>
                     <% end %>
 
-                    <%= if message.content && message.content != "" do %>
-                      <div class="whitespace-pre-wrap break-words leading-relaxed">
-                        <%= render_with_mentions(message.content, @active_conversation.users, is_mine) %>
-                      </div>
-                    <% end %>
-                  <% end %>
-
-                  <div class={"text-xs mt-1.5 flex items-center gap-1 #{if deleted, do: "opacity-60", else: "opacity-70"}"}>
-                    <span><%= Calendar.strftime(message.inserted_at, "%H:%M") %></span>
-                    <%= if edited && !deleted do %><span>· edited</span><% end %>
-                    <%= if is_mine && !deleted do %>
-                      <%= if message_seen?(message, @active_conversation, @current_user, @readers) do %>
-                        <span title="Seen" class="text-indigo-200 font-bold">✓✓</span>
-                      <% else %>
-                        <span title="Sent" class="opacity-70">✓</span>
-                      <% end %>
-                    <% end %>
-                  </div>
-
-                  <%= if !deleted do %>
-                    <div class="absolute -top-3 right-2 hidden group-hover:flex gap-0.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-md">
-                      <%= for e <- ["👍", "❤️", "😂", "😮"] do %>
-                        <button
-                          phx-click="react"
-                          phx-value-id={message.id}
-                          phx-value-emoji={e}
-                          title={"React " <> e}
-                          class="px-1.5 py-1 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 first:rounded-l-lg"
-                        ><%= e %></button>
-                      <% end %>
-                      <button
-                        phx-click="start_reply"
-                        phx-value-id={message.id}
-                        title="Reply"
-                        class="px-2 py-1 text-xs text-slate-600 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400"
-                      >↩</button>
-                      <%= if is_mine do %>
-                        <button
-                          phx-click="start_edit"
-                          phx-value-id={message.id}
-                          title="Edit"
-                          class="px-2 py-1 text-xs text-slate-600 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400"
-                        >✏️</button>
-                        <button
-                          phx-click="delete_message"
-                          phx-value-id={message.id}
-                          data-confirm="Delete this message?"
-                          title="Delete"
-                          class="px-2 py-1 text-xs text-slate-600 dark:text-slate-200 hover:text-red-600 dark:hover:text-red-400 rounded-r-lg"
-                        >🗑️</button>
+                    <div class={"text-xs mt-1.5 flex items-center gap-1 #{if deleted, do: "opacity-60", else: "opacity-70"}"}>
+                      <span title={time_ago(message.inserted_at)} class="cursor-help"><%= Calendar.strftime(message.inserted_at, "%H:%M") %></span>
+                      <%= if edited && !deleted do %><span>· edited</span><% end %>
+                      <%= if is_mine && !deleted do %>
+                        <%= cond do %>
+                          <% message_seen?(message, @active_conversation, @current_user, @readers) -> %>
+                            <span title="Seen" class="text-orange-400 font-bold">✓✓</span>
+                          <% message_delivered?(message, @active_conversation, @current_user, @delivereds) -> %>
+                            <span title="Delivered" class="opacity-80">✓✓</span>
+                          <% true -> %>
+                            <span title="Sent" class="opacity-70">✓</span>
+                        <% end %>
                       <% end %>
                     </div>
-                  <% end %>
-                </div>
-              <% end %>
 
-              <% groups = reaction_groups(message.reactions || [], @current_user) %>
-              <%= if groups != [] do %>
-                <div class="flex flex-wrap gap-1 mt-1">
-                  <%= for r <- groups do %>
-                    <button
-                      type="button"
-                      phx-click="react"
-                      phx-value-id={message.id}
-                      phx-value-emoji={r.emoji}
-                      title={Enum.join(r.users, ", ")}
-                      class={"inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition #{if r.me?, do: "bg-indigo-100 dark:bg-indigo-900/40 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300", else: "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"}"}
-                    >
-                      <span><%= r.emoji %></span>
-                      <%= if r.count > 1 do %>
-                        <span class="font-medium"><%= r.count %></span>
-                      <% end %>
-                    </button>
-                  <% end %>
-                </div>
-              <% end %>
+                    <%= if !deleted do %>
+                      <div class="absolute -top-3 right-2 hidden group-hover:flex gap-0.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-md">
+                        <%= for e <- ["👍", "❤️", "😂", "😮"] do %>
+                          <button phx-click="react" phx-value-id={message.id} phx-value-emoji={e} title={"React " <> e} class="px-1.5 py-1 text-sm hover:bg-slate-100 dark:hover:bg-slate-600 first:rounded-l-lg"><%= e %></button>
+                        <% end %>
+                        <button type="button" phx-click="toggle_star" phx-value-id={message.id} title="Star" class={"px-2 py-1 text-xs hover:bg-slate-100 dark:hover:bg-slate-600 #{if is_starred, do: "text-amber-500", else: "text-slate-600 dark:text-slate-200"}"}>⭐</button>
+                        <%= if message.content && message.content != "" do %>
+                          <button type="button" data-copy-text={message.content} phx-hook="CopyText" id={"copy-#{message.id}"} phx-update="ignore" title="Copy" class="px-2 py-1 text-xs text-slate-600 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400">📋</button>
+                        <% end %>
+                        <button phx-click="open_forward" phx-value-id={message.id} title="Forward" class="px-2 py-1 text-xs text-slate-600 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400">➡️</button>
+                        <button phx-click="start_reply" phx-value-id={message.id} title="Reply" class="px-2 py-1 text-xs text-slate-600 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400">↩</button>
+                        <%= if is_mine do %>
+                          <button phx-click="start_edit" phx-value-id={message.id} title="Edit" class="px-2 py-1 text-xs text-slate-600 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400">✏️</button>
+                          <button phx-click="delete_message" phx-value-id={message.id} data-confirm="Delete this message?" title="Delete" class="px-2 py-1 text-xs text-slate-600 dark:text-slate-200 hover:text-red-600 dark:hover:text-red-400">🗑️</button>
+                        <% end %>
+                        <%= if !is_mine do %>
+                          <button phx-click="open_report" phx-value-id={message.id} title="Report" class="px-2 py-1 text-xs text-slate-600 dark:text-slate-200 hover:text-red-600 dark:hover:text-red-400 rounded-r-lg">🚩</button>
+                        <% end %>
+                      </div>
+                    <% end %>
+                  </div>
+                <% end %>
+
+                <% groups = reaction_groups(message.reactions || [], @current_user) %>
+                <%= if groups != [] do %>
+                  <div class="flex flex-wrap gap-1 mt-1">
+                    <%= for r <- groups do %>
+                      <button type="button" phx-click="react" phx-value-id={message.id} phx-value-emoji={r.emoji} title={Enum.join(r.users, ", ")} class={"inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition #{if r.me?, do: "bg-indigo-100 dark:bg-indigo-900/40 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300", else: "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"}"}>
+                        <span><%= r.emoji %></span>
+                        <%= if r.count > 1 do %><span class="font-medium"><%= r.count %></span><% end %>
+                      </button>
+                    <% end %>
+                  </div>
+                <% end %>
+              </div>
             </div>
-          </div>
-        <% end %>
+          <% end %>
+        </div>
+
+        <button id="scroll-to-bottom" data-scroll-btn class="hidden absolute bottom-4 right-4 w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 items-center justify-center transition" title="Scroll to latest">↓</button>
       </div>
 
       <%= if @typing_users != [] do %>
@@ -407,9 +372,7 @@
         <%= if @reply_to do %>
           <div class="mb-2.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 border-l-4 border-indigo-500 rounded-lg flex items-center gap-2">
             <div class="flex-1 min-w-0">
-              <div class="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                Replying to <%= ViraChat.Accounts.User.display_name(@reply_to.user) %>
-              </div>
+              <div class="text-xs font-semibold text-slate-700 dark:text-slate-200">Replying to <%= ViraChat.Accounts.User.display_name(@reply_to.user) %></div>
               <div class="text-sm text-slate-500 dark:text-slate-400 truncate">
                 <%= cond do %>
                   <% @reply_to.deleted_at -> %>This message was deleted
@@ -445,20 +408,22 @@
           </div>
         <% end %>
 
-        <div id="mention-autocomplete" phx-hook="MentionAutocomplete" phx-update="ignore" class="relative">
-          <div data-mention-panel class="hidden absolute bottom-16 left-12 w-56 max-h-48 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-1 z-30">
+        <div id="mention-autocomplete" phx-hook="MentionAutocomplete" class="relative">
+          <div data-mention-panel id="mention-panel" phx-update="ignore" class="hidden absolute bottom-16 left-12 w-56 max-h-48 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-1 z-30">
             <div class="px-3 py-1 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Mention someone</div>
+            <%= if @active_conversation.type == "group" do %>
+              <button type="button" data-mention-name="everyone" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+                <span class="w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center text-[10px] font-bold">@</span>
+                <span>everyone</span>
+              </button>
+            <% end %>
             <%= for u <- @active_conversation.users do %>
               <%= if u.id != @current_user.id do %>
-                <button
-                  type="button"
-                  data-mention-name={ViraChat.Accounts.User.display_name(u)}
-                  class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
-                >
+                <button type="button" data-mention-name={ViraChat.Accounts.User.display_name(u)} class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
                   <%= if u.avatar_url do %>
                     <img src={u.avatar_url} class="w-6 h-6 rounded-full object-cover" />
                   <% else %>
-                    <div class="w-6 h-6 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">
+                    <div class={"w-6 h-6 rounded-full bg-gradient-to-br text-white flex items-center justify-center text-[10px] font-bold #{ViraChat.Accounts.User.avatar_gradient(u)}"}>
                       <%= String.first(u.email) |> String.upcase() %>
                     </div>
                   <% end %>
@@ -468,35 +433,25 @@
             <% end %>
           </div>
 
-          <.form for={@message_form} phx-submit="send_message" phx-change="validate" class="flex gap-1.5 sm:gap-2 items-center">
+          <.form for={@message_form} phx-submit="send_message" phx-change="validate" phx-hook="DraftMessages" id={"msg-form-#{@active_conversation.id}"} data-draft-key={"draft-conv-#{@active_conversation.id}"} class="flex gap-1.5 sm:gap-2 items-center">
             <label class="cursor-pointer w-10 h-10 flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition flex-shrink-0">
               <span class="text-xl">📎</span>
               <.live_file_input upload={@uploads.image} class="hidden" />
             </label>
 
-            <div class="flex items-center gap-1">
-              <.live_file_input upload={@uploads.audio} class="hidden" />
-              <div id="voice-recorder" phx-hook="VoiceRecorder" phx-update="ignore" class="flex items-center gap-1">
-                <button
-                  type="button"
-                  data-record-toggle
-                  title="Record voice message"
-                  class="w-10 h-10 flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xl"
-                >🎤</button>
-                <div data-record-indicator class="hidden flex items-center gap-2 bg-red-50 dark:bg-red-900/30 px-3 py-1.5 rounded-full">
-                  <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                  <span data-record-timer class="text-sm font-mono text-red-600 dark:text-red-400">00:00</span>
-                  <button type="button" data-record-stop class="text-xs font-medium text-red-600 dark:text-red-400 hover:underline">Stop</button>
-                </div>
+            <.live_file_input upload={@uploads.audio} class="hidden" />
+
+            <div id="voice-recorder" phx-hook="VoiceRecorder" phx-update="ignore" class="flex items-center gap-1">
+              <button type="button" data-record-toggle title="Record voice message" class="w-10 h-10 flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xl">🎤</button>
+              <div data-record-indicator class="hidden flex items-center gap-2 bg-red-50 dark:bg-red-900/30 px-3 py-1.5 rounded-full">
+                <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                <span data-record-timer class="text-sm font-mono text-red-600 dark:text-red-400">00:00</span>
+                <button type="button" data-record-stop class="text-xs font-medium text-red-600 dark:text-red-400 hover:underline">Stop</button>
               </div>
             </div>
 
             <div id="emoji-picker-wrapper" phx-hook="EmojiPicker" phx-update="ignore" class="relative">
-              <button
-                type="button"
-                data-emoji-toggle
-                class="w-10 h-10 flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xl"
-              >😊</button>
+              <button type="button" data-emoji-toggle class="w-10 h-10 flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xl">😊</button>
               <div data-emoji-panel class="hidden absolute bottom-14 left-0 w-72 h-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-3 overflow-y-auto z-20">
                 <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Smileys</div>
                 <div class="grid grid-cols-8 gap-1 mb-3">
@@ -513,16 +468,7 @@
               </div>
             </div>
 
-            <input
-              type="text"
-              name="content"
-              value={@message_form[:content].value}
-              placeholder="Type a message..."
-              autocomplete="off"
-              phx-keyup="typing"
-              phx-debounce="500"
-              class="flex-1 min-w-0 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-500"
-            />
+            <input type="text" name="content" value={@message_form[:content].value} placeholder="Type a message..." autocomplete="off" phx-keyup="typing" phx-debounce="500" class="flex-1 min-w-0 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-500" />
             <button type="submit" class="w-11 h-11 flex items-center justify-center bg-indigo-600 text-white rounded-full hover:bg-indigo-700 active:scale-95 transition flex-shrink-0">
               <span class="text-lg">➤</span>
             </button>
@@ -539,4 +485,59 @@
       </div>
     <% end %>
   </div>
+
+  <!-- FORWARD MODAL -->
+  <%= if @forwarding_message_id do %>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/50" phx-click="close_forward"></div>
+      <div class="relative z-10 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-6 max-h-[80vh] flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-100">Forward to…</h3>
+          <button type="button" phx-click="close_forward" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl">✕</button>
+        </div>
+        <div class="flex-1 overflow-y-auto space-y-1">
+          <%= for conversation <- @conversations do %>
+            <button type="button" phx-click="forward_to" phx-value-conversation_id={conversation.id} class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-sm text-slate-700 dark:text-slate-200 flex items-center gap-3 transition">
+              <div class={"w-9 h-9 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold flex-shrink-0 #{if conversation.type == "group", do: ViraChat.Chat.Conversation.group_gradient(conversation), else: ViraChat.Accounts.User.avatar_gradient(Enum.find(conversation.users, fn u -> u.id != @current_user.id end))}"}>
+                <%= String.first(conversation_title(conversation, @current_user)) |> String.upcase() %>
+              </div>
+              <span class="truncate"><%= conversation_title(conversation, @current_user) %></span>
+            </button>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- REPORT MODAL -->
+  <%= if @reporting_message_id do %>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/50" phx-click="close_report"></div>
+      <div class="relative z-10 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-100">Report message</h3>
+          <button type="button" phx-click="close_report" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl">✕</button>
+        </div>
+
+        <.form for={@report_form} phx-change="validate_report" phx-submit="submit_report" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Reason</label>
+            <select name="reason" class="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <%= for r <- ViraChat.Admin.Report.reasons() do %>
+                <option value={r} selected={@report_form[:reason].value == r}><%= ViraChat.Admin.Report.reason_label(r) %></option>
+              <% end %>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Additional details (optional)</label>
+            <textarea name="details" rows="3" maxlength="500" placeholder="Tell us more…" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"><%= @report_form[:details].value %></textarea>
+          </div>
+          <div class="flex justify-end gap-2">
+            <button type="button" phx-click="close_report" class="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:underline">Cancel</button>
+            <button type="submit" class="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">Submit report</button>
+          </div>
+        </.form>
+      </div>
+    </div>
+  <% end %>
 </div>

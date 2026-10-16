@@ -20,13 +20,12 @@ defmodule ViraChatWeb.AdminComponents do
         </div>
 
         <nav class="flex-1 p-2 space-y-1">
-          <.nav_link to="/admin" active={@active == :dashboard}>📊 Dashboard</.nav_link>
-          <.nav_link to="/admin/users" active={@active == :users}>👥 Users</.nav_link>
-          <.nav_link to="/admin/conversations" active={@active == :conversations}>
-            💬 Conversations
-          </.nav_link>
-          <.nav_link to="/admin/audit" active={@active == :audit}>📜 Audit log</.nav_link>
-        </nav>
+  <.nav_link to="/admin" active={@active == :dashboard}>📊 Dashboard</.nav_link>
+  <.nav_link to="/admin/users" active={@active == :users}>👥 Users</.nav_link>
+  <.nav_link to="/admin/conversations" active={@active == :conversations}>💬 Conversations</.nav_link>
+  <.nav_link to="/admin/audit" active={@active == :audit}>📜 Audit log</.nav_link>
+  <.nav_link to="/admin/reports" active={@active == :reports}>🚩 Reports</.nav_link>
+</nav>
 
         <div class="p-2 border-t border-gray-800 space-y-1">
           <.link
