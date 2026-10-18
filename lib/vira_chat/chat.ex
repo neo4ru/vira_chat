@@ -77,9 +77,15 @@ defmodule ViraChat.Chat do
         |> Repo.insert()
 
       for uid <- user_ids do
+        role = if uid == creator_id, do: "admin", else: "member"
+
         {:ok, _} =
           %Participant{}
-          |> Participant.changeset(%{user_id: uid, conversation_id: conversation.id})
+          |> Participant.changeset(%{
+            user_id: uid,
+            conversation_id: conversation.id,
+            role: role
+          })
           |> Repo.insert()
       end
 
@@ -116,13 +122,37 @@ defmodule ViraChat.Chat do
   # Messages
   # ------------------------------------------------------------------
 
-  def list_messages(conversation_id) do
-    from(m in Message,
-      where: m.conversation_id == ^conversation_id,
-      order_by: [asc: m.inserted_at],
-      preload: [:user, :forwarded_from, reply_to: :user, reactions: :user]
-    )
+  def list_messages(conversation_id, user_id, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 50)
+    offset = Keyword.get(opts, :offset, 0)
+
+    # Get the cleared_at timestamp for this user
+    cleared_at =
+      from(p in Participant,
+        where: p.conversation_id == ^conversation_id and p.user_id == ^user_id,
+        select: p.cleared_at
+      ) |> Repo.one()
+
+    query =
+      from(m in Message,
+        where: m.conversation_id == ^conversation_id,
+        order_by: [desc: m.inserted_at],
+        limit: ^limit,
+        offset: ^offset,
+        preload: [:user, :forwarded_from, reply_to: :user, reactions: :user]
+      )
+
+    # Filter out messages older than cleared_at
+    query =
+      if cleared_at do
+        from(m in query, where: m.inserted_at > ^cleared_at)
+      else
+        query
+      end
+
+    query
     |> Repo.all()
+    |> Enum.reverse()
   end
 
   def get_message!(id) do
@@ -343,7 +373,7 @@ defmodule ViraChat.Chat do
   end
 
   # ------------------------------------------------------------------
-  # Participant controls: mute / pin / archive / leave
+  # Participant controls: mute / pin / archive / leave / clear
   # ------------------------------------------------------------------
 
   defp get_participant(conversation_id, user_id) do
@@ -424,6 +454,22 @@ defmodule ViraChat.Chat do
       is_nil(participant) -> {:error, :not_a_participant}
       true -> Repo.delete(participant)
     end
+  end
+
+  def delete_conversation_for_user(conversation_id, user_id) do
+    Repo.delete_all(
+      from p in Participant,
+        where: p.conversation_id == ^conversation_id and p.user_id == ^user_id
+    )
+  end
+
+  def clear_chat_history(conversation_id, user_id) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    from(p in Participant,
+      where: p.conversation_id == ^conversation_id and p.user_id == ^user_id
+    )
+    |> Repo.update_all(set: [cleared_at: now])
   end
 
   # ------------------------------------------------------------------
@@ -575,5 +621,150 @@ defmodule ViraChat.Chat do
     |> Repo.update_all(set: [link_preview: preview])
 
     reload_message(message_id)
+  end
+
+  # ------------------------------------------------------------------
+  # Group management: roles, avatars, membership
+  # ------------------------------------------------------------------
+
+  def get_participant_role(conversation_id, user_id) do
+    case get_participant(conversation_id, user_id) do
+      nil -> nil
+      p -> p.role
+    end
+  end
+
+  def admin?(conversation_id, user_id) do
+    get_participant_role(conversation_id, user_id) == "admin"
+  end
+
+  def update_group_avatar(conversation_id, actor_id, avatar_url) do
+    conversation = get_conversation!(conversation_id)
+
+    cond do
+      conversation.type != "group" -> {:error, :not_a_group}
+      not admin?(conversation_id, actor_id) -> {:error, :unauthorized}
+      true ->
+        conversation
+        |> Conversation.changeset(%{avatar_url: avatar_url})
+        |> Repo.update()
+    end
+  end
+
+  def update_group_title(conversation_id, actor_id, title) do
+    conversation = get_conversation!(conversation_id)
+    title = String.trim(title)
+
+    cond do
+      conversation.type != "group" -> {:error, :not_a_group}
+      not admin?(conversation_id, actor_id) -> {:error, :unauthorized}
+      title == "" -> {:error, :empty}
+      true ->
+        conversation
+        |> Conversation.changeset(%{title: title})
+        |> Repo.update()
+    end
+  end
+
+  def promote_to_admin(conversation_id, actor_id, target_user_id) do
+    cond do
+      not admin?(conversation_id, actor_id) -> {:error, :unauthorized}
+      true ->
+        case get_participant(conversation_id, target_user_id) do
+          nil -> {:error, :not_a_participant}
+          p -> p |> Ecto.Changeset.change(role: "admin") |> Repo.update()
+        end
+    end
+  end
+
+  def demote_from_admin(conversation_id, actor_id, target_user_id) do
+    admin_count =
+      from(p in Participant,
+        where: p.conversation_id == ^conversation_id and p.role == "admin",
+        select: count(p.id)
+      )
+      |> Repo.one()
+
+    cond do
+      not admin?(conversation_id, actor_id) -> {:error, :unauthorized}
+      target_user_id == actor_id and admin_count <= 1 -> {:error, :last_admin}
+      true ->
+        case get_participant(conversation_id, target_user_id) do
+          nil -> {:error, :not_a_participant}
+          p -> p |> Ecto.Changeset.change(role: "member") |> Repo.update()
+        end
+    end
+  end
+
+  def remove_from_group(conversation_id, actor_id, target_user_id) do
+    cond do
+      not admin?(conversation_id, actor_id) -> {:error, :unauthorized}
+      target_user_id == actor_id -> {:error, :cannot_remove_self}
+      true ->
+        case get_participant(conversation_id, target_user_id) do
+          nil -> {:error, :not_a_participant}
+          p -> Repo.delete(p)
+        end
+    end
+  end
+
+  def list_participants_with_roles(conversation_id) do
+    from(p in Participant,
+      where: p.conversation_id == ^conversation_id,
+      preload: [:user],
+      order_by: [desc: p.role, asc: p.inserted_at]
+    )
+    |> Repo.all()
+  end
+
+  def list_shared_media(conversation_id, limit \\ 20) do
+    from(m in Message,
+      where: m.conversation_id == ^conversation_id,
+      where: not is_nil(m.media_url),
+      where: is_nil(m.deleted_at),
+      order_by: [desc: m.inserted_at],
+      limit: ^limit,
+      preload: [:user]
+    )
+    |> Repo.all()
+  end
+
+  def add_group_member(conversation_id, actor_id, target_user_id) do
+    cond do
+      not admin?(conversation_id, actor_id) ->
+        {:error, :unauthorized}
+
+      participant?(conversation_id, target_user_id) ->
+        {:error, :already_member}
+
+      true ->
+        %Participant{}
+        |> Participant.changeset(%{
+          user_id: target_user_id,
+          conversation_id: conversation_id,
+          role: "member"
+        })
+        |> Repo.insert()
+    end
+  end
+
+  def delete_group(conversation_id, actor_id) do
+    if admin?(conversation_id, actor_id) do
+      Repo.transaction(fn ->
+        message_ids = from(m in Message, where: m.conversation_id == ^conversation_id, select: m.id) |> Repo.all()
+
+        if message_ids != [] do
+          Repo.delete_all(from r in MessageReaction, where: r.message_id in ^message_ids)
+          Repo.delete_all(from s in MessageStar, where: s.message_id in ^message_ids)
+        end
+
+        Repo.delete_all(from m in Message, where: m.conversation_id == ^conversation_id)
+        Repo.delete_all(from p in Participant, where: p.conversation_id == ^conversation_id)
+
+        Repo.delete(get_conversation!(conversation_id))
+      end)
+    else
+      {:error, :unauthorized}
+    end
   end
 end

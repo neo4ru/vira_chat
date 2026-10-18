@@ -4,9 +4,11 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/vira_chat"
 import topbar from "../vendor/topbar"
 
+// Load the emoji picker from local node_modules instead of CDN
+import "emoji-picker-element"
+
 // --- Notification sounds (Web Audio API) ---
 let audioCtx = null
-
 function ensureAudioCtx() {
   if (!audioCtx) {
     const Ctx = window.AudioContext || window.webkitAudioContext
@@ -16,7 +18,6 @@ function ensureAudioCtx() {
   if (audioCtx.state === "suspended") audioCtx.resume()
   return audioCtx
 }
-
 function tone(freq, startAt, duration, gain = 0.08, type = "sine") {
   const ctx = ensureAudioCtx()
   if (!ctx) return
@@ -32,7 +33,6 @@ function tone(freq, startAt, duration, gain = 0.08, type = "sine") {
   osc.start(ctx.currentTime + startAt)
   osc.stop(ctx.currentTime + startAt + duration + 0.02)
 }
-
 function playNotificationSound(kind = "message") {
   if (!ensureAudioCtx()) return
   if (kind === "mention") {
@@ -43,12 +43,10 @@ function playNotificationSound(kind = "message") {
     tone(880, 0.08, 0.12, 0.06, "triangle")
   }
 }
-
 window.addEventListener("phx:play_sound", (event) => {
   const kind = (event.detail && event.detail.kind) || "message"
   playNotificationSound(kind)
 })
-
 ;["click", "keydown", "touchstart"].forEach((evt) => {
   window.addEventListener(evt, () => { ensureAudioCtx() }, { once: true })
 })
@@ -107,22 +105,33 @@ Hooks.EmojiPicker = {
   mounted() {
     const button = this.el.querySelector("[data-emoji-toggle]")
     const panel = this.el.querySelector("[data-emoji-panel]")
+    const picker = this.el.querySelector("emoji-picker")
     const form = this.el.closest("form")
     const input = form ? form.querySelector("input[name='content']") : null
+    
     if (!button || !panel || !input) return
+
     button.addEventListener("click", (e) => {
       e.preventDefault()
       panel.classList.toggle("hidden")
     })
-    panel.querySelectorAll("[data-emoji]").forEach((el) => {
-      el.addEventListener("click", (e) => {
-        e.preventDefault()
-        const emoji = el.getAttribute("data-emoji")
-        input.value = input.value + emoji
+
+    if (picker) {
+      picker.addEventListener("emoji-click", (event) => {
+        const emoji = event.detail.unicode
+        
+        // Insert at cursor position
+        const startPos = input.selectionStart
+        const endPos = input.selectionEnd
+        input.value = input.value.substring(0, startPos) + emoji + input.value.substring(endPos, input.value.length)
+        
+        // Trigger LiveView
         input.focus()
+        input.setSelectionRange(startPos + emoji.length, startPos + emoji.length)
         input.dispatchEvent(new Event("input", {bubbles: true}))
       })
-    })
+    }
+
     document.addEventListener("click", (e) => {
       if (!this.el.contains(e.target)) panel.classList.add("hidden")
     })
@@ -166,37 +175,6 @@ Hooks.CopyText = {
   }
 }
 
-Hooks.DraftMessages = {
-  mounted() {
-    const form = this.el.closest("form")
-    const input = form ? form.querySelector("input[name='content']") : null
-    if (!input) return
-
-    const key = this.el.getAttribute("data-draft-key") || "virachat-draft"
-
-    // Restore draft on mount
-    const saved = localStorage.getItem(key)
-    if (saved) {
-      input.value = saved
-      input.dispatchEvent(new Event("input", {bubbles: true}))
-    }
-
-    // Save on every input
-    input.addEventListener("input", () => {
-      if (input.value.trim() === "") {
-        localStorage.removeItem(key)
-      } else {
-        localStorage.setItem(key, input.value)
-      }
-    })
-
-    // Clear draft when the form submits
-    form.addEventListener("submit", () => {
-      localStorage.removeItem(key)
-    })
-  }
-}
-
 Hooks.AudioSpeed = {
   mounted() {
     const btn = this.el.querySelector("[data-speed-btn]")
@@ -228,6 +206,33 @@ Hooks.ImageLightbox = {
       overlay.addEventListener("click", close)
       document.addEventListener("keydown", onEsc)
       document.body.appendChild(overlay)
+    })
+  }
+}
+
+Hooks.DraftMessages = {
+  mounted() {
+    const form = this.el.closest("form")
+    const input = form ? form.querySelector("input[name='content']") : null
+    if (!input) return
+    const key = this.el.getAttribute("data-draft-key") || "virachat-draft"
+
+    const saved = localStorage.getItem(key)
+    if (saved) {
+      input.value = saved
+      input.dispatchEvent(new Event("input", {bubbles: true}))
+    }
+
+    input.addEventListener("input", () => {
+      if (input.value.trim() === "") {
+        localStorage.removeItem(key)
+      } else {
+        localStorage.setItem(key, input.value)
+      }
+    })
+
+    form.addEventListener("submit", () => {
+      localStorage.removeItem(key)
     })
   }
 }
@@ -305,10 +310,8 @@ Hooks.VoiceRecorder = {
     const timerEl = this.el.querySelector("[data-record-timer]")
     const indicator = this.el.querySelector("[data-record-indicator]")
     const form = this.el.closest("form")
-    if (!recordBtn || !stopBtn || !timerEl || !indicator || !form) {
-      console.warn("VoiceRecorder: missing elements")
-      return
-    }
+    if (!recordBtn || !stopBtn || !timerEl || !indicator || !form) return
+    
     let mediaRecorder = null
     let chunks = []
     let timerInterval = null
@@ -337,7 +340,7 @@ Hooks.VoiceRecorder = {
       const ext = blob.type.includes("mpeg") || blob.type.includes("mp3") ? "mp3" : "webm"
       const file = new File([blob], `voice-${Date.now()}.${ext}`, {type: blob.type})
       const uploadInput = form.querySelector("input[type='file'][name='audio']")
-      if (!uploadInput) { console.error("VoiceRecorder: no audio input"); return }
+      if (!uploadInput) return
       const dt = new DataTransfer()
       dt.items.add(file)
       uploadInput.files = dt.files
@@ -349,10 +352,7 @@ Hooks.VoiceRecorder = {
     }
     recordBtn.addEventListener("click", async (e) => {
       e.preventDefault()
-      if (!navigator.mediaDevices || !window.MediaRecorder) {
-        this.pushEvent("voice_failed", {reason: "unsupported"})
-        return
-      }
+      if (!navigator.mediaDevices || !window.MediaRecorder) return
       try {
         const stream = await navigator.mediaDevices.getUserMedia({audio: true})
         const preferred = ["audio/webm;codecs=opus", "audio/webm", "audio/mpeg"]
@@ -370,14 +370,7 @@ Hooks.VoiceRecorder = {
         indicator.classList.add("flex")
         recordBtn.classList.add("hidden")
         startTimer()
-      } catch (err) {
-        console.error("VoiceRecorder: getUserMedia failed:", err)
-        const reason =
-          err.name === "NotFoundError" ? "no_device"
-          : err.name === "NotAllowedError" ? "permission"
-          : "unknown"
-        this.pushEvent("voice_failed", {reason: reason})
-      }
+      } catch (err) {}
     })
     stopBtn.addEventListener("click", (e) => {
       e.preventDefault()
@@ -395,10 +388,6 @@ Hooks.VoiceRecorder = {
         hideIndicator()
       }
     }, true)
-    this.destroyed = () => {
-      stopTimer()
-      if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop()
-    }
   }
 }
 
@@ -407,13 +396,10 @@ Hooks.EnablePush = {
     this.el.addEventListener("click", (e) => { e.preventDefault(); this.enable() })
   },
   async enable() {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-      this.pushEvent("push_failed", {reason: "unsupported"})
-      return
-    }
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return
     try {
       const permission = await Notification.requestPermission()
-      if (permission !== "granted") { this.pushEvent("push_failed", {reason: "denied"}); return }
+      if (permission !== "granted") return
       const reg = await navigator.serviceWorker.register("/sw.js", {scope: "/"})
       await navigator.serviceWorker.ready
       const vapidKey = document.querySelector("meta[name='vapid-public-key']").getAttribute("content")
@@ -422,10 +408,7 @@ Hooks.EnablePush = {
         applicationServerKey: urlBase64ToUint8Array(vapidKey)
       })
       this.pushEvent("push_subscribed", {subscription: sub.toJSON()})
-    } catch (err) {
-      console.error("Push enable failed:", err)
-      this.pushEvent("push_failed", {reason: String(err)})
-    }
+    } catch (err) {}
   }
 }
 
