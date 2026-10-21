@@ -1,40 +1,46 @@
-<.admin_layout active={:dashboard} current_user={@current_user}>
-  <h1 class="text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
-
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-    <.stat_card label="Total users" value={@stats.users} color="blue" />
-    <.stat_card label="New (24h)" value={@stats.users_24h} color="green" />
-    <.stat_card label="Online now" value={@stats.online_now} color="green" />
-    <.stat_card label="Banned" value={@stats.banned} color="red" />
-    <.stat_card label="Conversations" value={@stats.conversations} color="purple" />
-    <.stat_card label="Messages" value={@stats.messages} color="indigo" />
-    <.stat_card label="Messages (24h)" value={@stats.messages_24h} color="green" />
-    <.stat_card label="Admins" value={@stats.admins} color="amber" />
-  </div>
-
-  <div class="bg-white rounded-lg shadow">
-    <div class="p-4 border-b border-gray-200">
-      <h2 class="font-semibold text-gray-800">Recent messages</h2>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <.admin_layout active={:dashboard} current_user={@current_user}>
+    <h1 class="text-[22px] font-bold text-ink dark:text-white mb-6">Dashboard</h1>
+    
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <.stat_card label="Total users" value={@stats.users} color="blue" />
+      <.stat_card label="New (24h)" value={@stats.users_24h} color="green" />
+      <.stat_card label="Online now" value={@stats.online_now} color="green" />
+      <.stat_card label="Banned" value={@stats.banned} color="red" />
+      <.stat_card label="Conversations" value={@stats.conversations} color="purple" />
+      <.stat_card label="Messages" value={@stats.messages} color="indigo" />
+      <.stat_card label="Messages (24h)" value={@stats.messages_24h} color="green" />
+      <.stat_card label="Admins" value={@stats.admins} color="amber" />
     </div>
-    <div class="divide-y divide-gray-100">
-      <%= for msg <- @recent_messages do %>
-        <div class="p-3 flex items-start gap-3 text-sm">
-          <div class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
-            <%= String.first(msg.user.email) |> String.upcase() %>
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="font-medium text-gray-700 truncate">
-              <%= ViraChat.Accounts.User.display_name(msg.user) %>
+    
+    <div class="rounded-xl border border-line bg-white shadow-sm dark:border-[#242424] dark:bg-[#141414]">
+      <div class="p-4 border-b border-line dark:border-[#242424]">
+        <h2 class="font-semibold text-ink dark:text-white">Recent messages</h2>
+      </div>
+      
+      <div class="divide-y divide-line dark:divide-[#242424]">
+        <%= for msg <- @recent_messages do %>
+          <div class="p-3 flex items-start gap-3 text-sm">
+            <div class="w-8 h-8 rounded-full bg-brand text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+              {String.first(msg.user.email) |> String.upcase()}
             </div>
-            <div class="text-gray-600 truncate">
-              <%= if msg.deleted_at, do: "(deleted)", else: msg.content || "📎 attachment" %>
+            
+            <div class="flex-1 min-w-0">
+              <div class="font-medium text-ink dark:text-[#d8dfeb] truncate">
+                {ViraChat.Accounts.User.display_name(msg.user)}
+              </div>
+              
+              <div class="text-body truncate">
+                {if msg.deleted_at, do: "(deleted)", else: msg.content || "📎 attachment"}
+              </div>
+            </div>
+            
+            <div class="text-xs text-muted flex-shrink-0">
+              {Calendar.strftime(msg.inserted_at, "%Y-%m-%d %H:%M")}
             </div>
           </div>
-          <div class="text-xs text-gray-400 flex-shrink-0">
-            <%= Calendar.strftime(msg.inserted_at, "%Y-%m-%d %H:%M") %>
-          </div>
-        </div>
-      <% end %>
+        <% end %>
+      </div>
     </div>
-  </div>
-</.admin_layout>
+  </.admin_layout>
+</Layouts.app>

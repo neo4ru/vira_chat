@@ -8,9 +8,16 @@ defmodule ViraChatWeb.UserLive.LoginTest do
     test "renders login page", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/users/log-in")
 
-      assert html =~ "Log in"
+      assert html =~ "Welcome back"
+      assert html =~ "Send me a login link"
       assert html =~ "Sign up"
-      assert html =~ "Log in with email"
+    end
+
+    test "renders a link to reset the password", %{conn: conn} do
+      {:ok, _lv, html} = live(conn, ~p"/users/log-in")
+
+      assert html =~ "Forgot password?"
+      assert html =~ ~p"/users/reset-password"
     end
   end
 
@@ -56,7 +63,7 @@ defmodule ViraChatWeb.UserLive.LoginTest do
 
       conn = submit_form(form, conn)
 
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) == ~p"/chat"
     end
 
     test "redirects to login page with a flash error if credentials are invalid", %{
@@ -76,16 +83,16 @@ defmodule ViraChatWeb.UserLive.LoginTest do
   end
 
   describe "login navigation" do
-    test "redirects to registration page when the Register button is clicked", %{conn: conn} do
+    test "redirects to registration page when the Sign up link is clicked", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/users/log-in")
 
-      {:ok, _login_live, login_html} =
+      {:ok, _register_live, register_html} =
         lv
-        |> element("main a", "Sign up")
+        |> element("a", "Sign up")
         |> render_click()
         |> follow_redirect(conn, ~p"/users/register")
 
-      assert login_html =~ "Register"
+      assert register_html =~ "Create your account"
     end
   end
 
@@ -98,12 +105,11 @@ defmodule ViraChatWeb.UserLive.LoginTest do
     test "shows login page with email filled in", %{conn: conn, user: user} do
       {:ok, _lv, html} = live(conn, ~p"/users/log-in")
 
-      assert html =~ "You need to reauthenticate"
-      refute html =~ "Register"
-      assert html =~ "Log in with email"
+      assert html =~ "Reauthenticate to perform sensitive actions"
+      refute html =~ "Create your account"
 
-      assert html =~
-               ~s(<input type="email" name="user[email]" id="login_form_magic_email" value="#{user.email}")
+      assert html =~ ~s(id="user_email")
+      assert html =~ ~s(value="#{user.email}")
     end
   end
 end

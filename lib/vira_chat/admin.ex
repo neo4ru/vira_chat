@@ -17,10 +17,8 @@ defmodule ViraChat.Admin do
       banned: Repo.aggregate(from(u in User, where: not is_nil(u.banned_at)), :count),
       conversations: Repo.aggregate(Conversation, :count),
       messages: Repo.aggregate(Message, :count),
-      messages_24h:
-        Repo.aggregate(from(m in Message, where: m.inserted_at > ^day_ago), :count),
-      users_24h:
-        Repo.aggregate(from(u in User, where: u.inserted_at > ^day_ago), :count),
+      messages_24h: Repo.aggregate(from(m in Message, where: m.inserted_at > ^day_ago), :count),
+      users_24h: Repo.aggregate(from(u in User, where: u.inserted_at > ^day_ago), :count),
       online_now: map_size(ViraChatWeb.Presence.list("online_users"))
     }
   end

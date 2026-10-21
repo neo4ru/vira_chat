@@ -5,34 +5,28 @@ defmodule ViraChatWeb.UserLive.Login do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 px-4 py-12">
-      <div class="w-full max-w-md">
-        <div class="text-center mb-8">
-          <.link navigate={~p"/"} class="inline-flex items-center gap-2">
-            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl">V</div>
-            <span class="text-2xl font-bold text-gray-900">ViraChat</span>
-          </.link>
-          <h1 class="text-2xl font-bold text-gray-900 mt-6">Welcome back</h1>
-          <p class="text-gray-500 text-sm mt-1">
-            <%= if @current_scope do %>
-              Reauthenticate to perform sensitive actions
-            <% else %>
-              Log in to continue your conversations
-            <% end %>
+    <Layouts.app flash={@flash} current_scope={@current_scope}>
+      <.auth_shell
+        title="Welcome back"
+        subtitle={
+          if @current_scope,
+            do: "Reauthenticate to perform sensitive actions.",
+            else: "Log in to continue your conversations."
+        }
+      >
+        <div
+          :if={local_mail_adapter?()}
+          class="mb-5 flex items-start gap-2 rounded-xl border border-brand/15 bg-brand-soft px-3 py-2.5 text-[11.5px] leading-relaxed text-brand"
+        >
+          <.icon name="hero-information-circle" class="mt-0.5 size-4 flex-shrink-0" />
+          <p>
+            Running the local mail adapter — emails appear in
+            <a href="/dev/mailbox" class="font-semibold underline">the mailbox</a>.
           </p>
         </div>
 
-        <div :if={local_mail_adapter?()} class="mb-4 rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-800 flex gap-2 items-start">
-          <span class="text-base leading-none mt-0.5">ℹ</span>
-          <div>
-            <p class="font-medium">Running the local mail adapter.</p>
-            <p>Sent emails appear in <a href="/dev/mailbox" class="underline">the mailbox</a>.</p>
-          </div>
-        </div>
-
-        <div class="bg-white rounded-2xl shadow-xl shadow-slate-900/5 border border-gray-100 p-8">
+        <div class="rounded-2xl border border-line bg-white p-5 shadow-sm dark:border-[#242424] dark:bg-[#141414]">
           <.form
-            :let={f}
             for={@form}
             id="login_form_magic"
             action={~p"/users/log-in"}
@@ -40,35 +34,40 @@ defmodule ViraChatWeb.UserLive.Login do
             class="space-y-3"
           >
             <div>
-              <label for={f[:email].id} class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label
+                for={@form[:email].id}
+                class="mb-1.5 block text-[12px] font-semibold text-ink dark:text-white"
+              >
+                Email
+              </label>
               <input
                 type="email"
-                name={f[:email].name}
-                id={f[:email].id}
-                value={f[:email].value}
+                name={@form[:email].name}
+                id={@form[:email].id}
+                value={@form[:email].value}
                 readonly={!!@current_scope}
                 required
                 autocomplete="username"
-                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="you@example.com"
+                class="w-full rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-[13px] text-ink outline-none transition placeholder:text-muted focus:border-brand/40 focus:bg-white focus:ring-2 focus:ring-brand/15 dark:border-[#2a2a2a] dark:bg-[#161616] dark:text-white dark:focus:bg-[#111]"
               />
             </div>
+
             <button
               type="submit"
-              class="w-full py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-semibold transition"
+              class="w-full rounded-xl bg-brand px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm shadow-brand/30 transition hover:bg-brand-600"
             >
               Send me a login link
             </button>
           </.form>
 
-          <div class="flex items-center gap-3 my-6">
-            <div class="flex-1 h-px bg-gray-200"></div>
-            <span class="text-xs text-gray-400 font-medium">OR</span>
-            <div class="flex-1 h-px bg-gray-200"></div>
+          <div class="my-5 flex items-center gap-3">
+            <div class="h-px flex-1 bg-line dark:bg-[#2a2a2a]"></div>
+            <span class="text-[10px] font-bold uppercase tracking-[0.12em] text-muted">or</span>
+            <div class="h-px flex-1 bg-line dark:bg-[#2a2a2a]"></div>
           </div>
 
           <.form
-            :let={f}
             for={@form}
             id="login_form_password"
             action={~p"/users/log-in"}
@@ -77,60 +76,72 @@ defmodule ViraChatWeb.UserLive.Login do
             class="space-y-3"
           >
             <div>
-              <label for={"pw_" <> f[:email].id} class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label
+                for="pw_user_email"
+                class="mb-1.5 block text-[12px] font-semibold text-ink dark:text-white"
+              >
+                Email
+              </label>
               <input
                 type="email"
-                name={f[:email].name}
-                id={"pw_" <> f[:email].id}
-                value={f[:email].value}
+                name={@form[:email].name}
+                id="pw_user_email"
+                value={@form[:email].value}
                 readonly={!!@current_scope}
                 required
                 autocomplete="username"
-                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-[13px] text-ink outline-none transition placeholder:text-muted focus:border-brand/40 focus:bg-white focus:ring-2 focus:ring-brand/15 dark:border-[#2a2a2a] dark:bg-[#161616] dark:text-white dark:focus:bg-[#111]"
               />
             </div>
+
             <div>
-              <div class="flex justify-between items-center mb-1">
-                <label for={"pw_" <> f[:password].id} class="block text-sm font-medium text-gray-700">Password</label>
-                <.link navigate={~p"/users/reset-password"} class="text-xs text-blue-600 hover:underline">
-                  Forgot?
+              <div class="mb-1.5 flex items-center justify-between">
+                <label for="pw_user_password" class="text-[12px] font-semibold text-ink dark:text-white">
+                  Password
+                </label>
+                <.link
+                  navigate={~p"/users/reset-password"}
+                  class="text-[11.5px] font-semibold text-brand hover:underline"
+                >
+                  Forgot password?
                 </.link>
               </div>
               <input
                 type="password"
-                name={f[:password].name}
-                id={"pw_" <> f[:password].id}
+                name={@form[:password].name}
+                id="pw_user_password"
                 required
                 autocomplete="current-password"
-                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="••••••••"
+                class="w-full rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-[13px] text-ink outline-none transition placeholder:text-muted focus:border-brand/40 focus:bg-white focus:ring-2 focus:ring-brand/15 dark:border-[#2a2a2a] dark:bg-[#161616] dark:text-white dark:focus:bg-[#111]"
               />
             </div>
+
             <button
               type="submit"
-              name={f[:remember_me].name}
+              name={@form[:remember_me].name}
               value="true"
-              class="w-full py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition"
+              class="w-full rounded-xl bg-brand px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm shadow-brand/30 transition hover:bg-brand-600"
             >
               Log in and stay logged in
             </button>
             <button
               type="submit"
-              class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition"
+              class="w-full rounded-xl border border-line bg-white px-4 py-2.5 text-[13px] font-semibold text-ink transition hover:border-brand/30 hover:text-brand dark:border-[#2a2a2a] dark:bg-[#161616] dark:text-white"
             >
               Log in only this time
             </button>
           </.form>
         </div>
 
-        <p class="text-center text-sm text-gray-500 mt-6">
+        <p class="mt-5 text-center text-[12.5px] text-body">
           Don't have an account?
-          <.link navigate={~p"/users/register"} class="text-blue-600 hover:underline font-medium">
+          <.link navigate={~p"/users/register"} class="font-semibold text-brand hover:underline">
             Sign up
           </.link>
         </p>
-      </div>
-    </div>
+      </.auth_shell>
+    </Layouts.app>
     """
   end
 

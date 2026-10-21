@@ -17,7 +17,8 @@ defmodule ViraChatWeb do
   those modules here.
   """
 
-  def static_paths, do: ~w(assets fonts images favicon.ico robots.txt uploads)
+  def static_paths,
+    do: ~w(assets fonts images favicon.ico robots.txt sw.js manifest.json uploads)
 
   def router do
     quote do
@@ -86,6 +87,7 @@ defmodule ViraChatWeb do
       import Phoenix.HTML
       # Core UI components
       import ViraChatWeb.CoreComponents
+      import ViraChatWeb.AuthComponents
 
       # Common modules used in templates
       alias Phoenix.LiveView.JS

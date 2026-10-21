@@ -3,6 +3,21 @@ defmodule ViraChat.Reports do
   alias ViraChat.Repo
   alias ViraChat.Admin.Report
 
+  @doc """
+  The list of reasons a message can be reported for.
+  """
+  defdelegate reasons(), to: Report
+
+  @doc """
+  A human friendly label for a report reason.
+  """
+  defdelegate reason_label(reason), to: Report
+
+  @doc """
+  A human friendly label for a report status.
+  """
+  defdelegate status_label(status), to: Report
+
   def create_report(reporter_id, attrs) do
     %Report{}
     |> Report.changeset(Map.put(attrs, :reporter_id, reporter_id))

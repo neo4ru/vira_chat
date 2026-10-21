@@ -1,77 +1,104 @@
-<div class="min-h-screen bg-slate-50 dark:bg-slate-950">
-  <header class="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-10">
-    <div class="max-w-3xl mx-auto px-4 py-4 flex items-center gap-3">
-      <.link navigate={~p"/chat"} class="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition">←</.link>
-      <div class="flex items-center gap-2">
-        <span class="text-2xl">⭐</span>
-        <h1 class="text-xl font-bold text-slate-800 dark:text-slate-100">Starred messages</h1>
-      </div>
-      <span class="text-sm text-slate-500 dark:text-slate-400 ml-auto"><%= length(@messages) %></span>
-    </div>
-  </header>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <div class="min-h-screen bg-surface dark:bg-[#0b0b0d]">
+    <header class="sticky top-0 z-10 border-b border-line bg-white/95 backdrop-blur dark:border-[#222224] dark:bg-[#0d0d0d]/95">
+      <div class="mx-auto flex max-w-3xl items-center gap-3 px-4 py-4 sm:px-6">
+        <.link
+          navigate={~p"/chat"}
+          class="flex h-9 w-9 items-center justify-center rounded-lg text-body transition hover:bg-surface-2 dark:hover:bg-[#161616]"
+          aria-label="Back to chats"
+        >
+          <.icon name="hero-arrow-left" class="size-5" />
+        </.link>
 
-  <main class="max-w-3xl mx-auto px-4 py-6">
-    <%= if @messages == [] do %>
-      <div class="text-center py-20 text-slate-400 dark:text-slate-600">
-        <div class="w-16 h-16 mx-auto mb-4 rounded-3xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-3xl shadow-lg shadow-amber-500/20">⭐</div>
-        <p class="text-lg font-medium text-slate-600 dark:text-slate-300">No starred messages yet</p>
-        <p class="text-sm mt-1">Hover any message in a chat and click ⭐ to save it here.</p>
-      </div>
-    <% else %>
-      <div class="space-y-3">
-        <%= for message <- @messages do %>
-          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 hover:shadow-md transition group">
-            <div class="flex items-start gap-3 mb-3">
-              <%= if message.user.avatar_url do %>
-                <img src={message.user.avatar_url} class="w-9 h-9 rounded-full object-cover flex-shrink-0" />
-              <% else %>
-                <div class={"w-9 h-9 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold flex-shrink-0 #{ViraChat.Accounts.User.avatar_gradient(message.user)}"}>
-                  <%= String.first(message.user.email) |> String.upcase() %>
-                </div>
-              <% end %>
-              <div class="flex-1 min-w-0">
-                <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                  <%= ViraChat.Accounts.User.display_name(message.user) %>
-                </div>
-                <div class="text-xs text-slate-500 dark:text-slate-400">
-                  in <span class="font-medium"><%= conversation_title(message.conversation, @current_user) %></span>
-                  · <%= time_ago(message.inserted_at) %>
-                </div>
-              </div>
-              <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition">
-                <button
-                  type="button"
-                  phx-click="open_conversation"
-                  phx-value-id={message.conversation_id}
-                  title="Go to chat"
-                  class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm"
-                >↗</button>
-                <button
-                  type="button"
-                  phx-click="unstar"
-                  phx-value-id={message.id}
-                  title="Unstar"
-                  class="w-8 h-8 flex items-center justify-center rounded-lg text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 text-sm"
-                >⭐</button>
-              </div>
-            </div>
-
-            <div class="pl-12">
-              <%= if message.content && message.content != "" do %>
-                <div class="text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-words leading-relaxed">
-                  <%= message.content %>
-                </div>
-              <% end %>
-
-              <%= if message.media_url do %>
-                <div class="mt-2">
-                  <div class="text-xs text-slate-500 dark:text-slate-400 italic">📎 Attachment (open chat to view)</div>
-                </div>
-              <% end %>
-            </div>
+        <div class="flex items-center gap-2.5">
+          <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-soft text-brand dark:bg-[#1b1530]">
+            <.icon name="hero-star" class="size-4" />
           </div>
-        <% end %>
+          <h1 class="text-[18px] font-bold tracking-tight text-ink dark:text-white">
+            Starred messages
+          </h1>
+        </div>
+
+        <span class="ml-auto rounded-full bg-surface-2 px-2.5 py-1 text-[11.5px] font-semibold text-body dark:bg-[#161616]">
+          {length(@messages)}
+        </span>
       </div>
-    <% end %>
-  </main>
-</div>
+    </header>
+
+    <main class="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+      <%= if @messages == [] do %>
+        <div class="rounded-2xl border border-line bg-white px-6 py-16 text-center dark:border-[#242424] dark:bg-[#141414]">
+          <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-brand-soft text-brand dark:bg-[#1b1530]">
+            <.icon name="hero-star" class="size-7" />
+          </div>
+          <p class="text-[16px] font-bold text-ink dark:text-white">No starred messages yet</p>
+          <p class="mt-1 text-[13px] text-body">
+            Hover a message in a chat and choose <span class="font-semibold">Star</span> to save it here.
+          </p>
+        </div>
+      <% else %>
+        <div class="space-y-3">
+          <%= for message <- @messages do %>
+            <div class="group rounded-2xl border border-line bg-white p-4 transition hover:border-brand/30 hover:shadow-sm dark:border-[#242424] dark:bg-[#141414]">
+              <div class="mb-3 flex items-start gap-3">
+                <%= if message.user.avatar_url do %>
+                  <img
+                    src={message.user.avatar_url}
+                    class="h-9 w-9 flex-shrink-0 rounded-full object-cover"
+                  />
+                <% else %>
+                  <div class={"flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-[11px] font-bold text-white #{ViraChat.Accounts.User.avatar_gradient(message.user)}"}>
+                    {String.first(message.user.email) |> String.upcase()}
+                  </div>
+                <% end %>
+
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-[13px] font-semibold text-ink dark:text-white">
+                    {ViraChat.Accounts.User.display_name(message.user)}
+                  </p>
+                  <p class="truncate text-[11.5px] text-body">
+                    in <span class="font-medium text-ink dark:text-[#d8dfeb]">{conversation_title(message.conversation, @current_user)}</span>
+                    · {time_ago(message.inserted_at)}
+                  </p>
+                </div>
+
+                <div class="flex gap-1 opacity-0 transition group-hover:opacity-100">
+                  <button
+                    type="button"
+                    phx-click="open_conversation"
+                    phx-value-id={message.conversation_id}
+                    title="Go to chat"
+                    class="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition hover:bg-surface-2 hover:text-brand dark:hover:bg-[#202020]"
+                  >
+                    <.icon name="hero-arrow-up-right" class="size-4" />
+                  </button>
+                  <button
+                    type="button"
+                    phx-click="unstar"
+                    phx-value-id={message.id}
+                    title="Unstar"
+                    class="flex h-8 w-8 items-center justify-center rounded-lg text-brand transition hover:bg-brand-soft dark:hover:bg-[#1b1530]"
+                  >
+                    <.icon name="hero-star" class="size-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div class="border-l-2 border-brand/30 pl-3">
+                <%= if message.content && message.content != "" do %>
+                  <div class="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-body">{message.content}</div>
+                <% end %>
+
+                <%= if message.media_url do %>
+                  <div class="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 py-1.5 text-[11.5px] text-body dark:bg-[#1c1c1c]">
+                    <.icon name="hero-paper-clip" class="size-3.5" /> Attachment — open chat to view
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </main>
+  </div>
+</Layouts.app>

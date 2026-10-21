@@ -3,12 +3,23 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/vira_chat"
 import topbar from "../vendor/topbar"
+import CallControls from "./hooks/call_controls"
 
-// Load the emoji picker from local node_modules instead of CDN
+// Emoji Picker & Flag Polyfill
 import "emoji-picker-element"
+import { polyfillCountryFlagEmojis } from "country-flag-emoji-polyfill"
 
-// --- Notification sounds (Web Audio API) ---
+// Initialize the flag polyfill immediately
+try {
+  polyfillCountryFlagEmojis("Twemoji Mozilla")
+} catch (e) {
+  console.warn("Flag emoji polyfill failed to load", e)
+}
+
+// --- Audio & Ringtone ---
 let audioCtx = null
+let ringtoneInterval = null
+
 function ensureAudioCtx() {
   if (!audioCtx) {
     const Ctx = window.AudioContext || window.webkitAudioContext
@@ -18,6 +29,7 @@ function ensureAudioCtx() {
   if (audioCtx.state === "suspended") audioCtx.resume()
   return audioCtx
 }
+
 function tone(freq, startAt, duration, gain = 0.08, type = "sine") {
   const ctx = ensureAudioCtx()
   if (!ctx) return
@@ -33,6 +45,7 @@ function tone(freq, startAt, duration, gain = 0.08, type = "sine") {
   osc.start(ctx.currentTime + startAt)
   osc.stop(ctx.currentTime + startAt + duration + 0.02)
 }
+
 function playNotificationSound(kind = "message") {
   if (!ensureAudioCtx()) return
   if (kind === "mention") {
@@ -43,15 +56,54 @@ function playNotificationSound(kind = "message") {
     tone(880, 0.08, 0.12, 0.06, "triangle")
   }
 }
+
+function startRingtone() {
+  if (ringtoneInterval) return
+  playNotificationSound("mention")
+  ringtoneInterval = setInterval(() => playNotificationSound("mention"), 2000)
+}
+
+function buildIceServers() {
+  const servers = [{ urls: "stun:stun.l.google.com:19302" }]
+  const url = document.querySelector('meta[name="turn-url"]')?.content
+  const username = document.querySelector('meta[name="turn-username"]')?.content
+  const credential = document.querySelector('meta[name="turn-credential"]')?.content
+
+  if (url && username && credential) {
+    servers.push({ urls: url.split(",").map((u) => u.trim()), username, credential })
+  }
+
+  return servers
+}
+
+function stopRingtone() {
+  if (ringtoneInterval) {
+    clearInterval(ringtoneInterval)
+    ringtoneInterval = null
+  }
+}
+
 window.addEventListener("phx:play_sound", (event) => {
   const kind = (event.detail && event.detail.kind) || "message"
   playNotificationSound(kind)
 })
+
+window.addEventListener("phx:start_ringtone", startRingtone)
+window.addEventListener("phx:stop_ringtone", stopRingtone)
+
+// Desktop Notifications
+window.addEventListener("phx:notify", (event) => {
+  if (!("Notification" in window)) return
+  if (Notification.permission === "granted") {
+    new Notification(event.detail.title, { body: event.detail.body, icon: "/images/logo.png" })
+  }
+})
+
 ;["click", "keydown", "touchstart"].forEach((evt) => {
   window.addEventListener(evt, () => { ensureAudioCtx() }, { once: true })
 })
 
-// Apply saved theme before first paint
+// Apply saved theme
 ;(function () {
   try {
     const saved = localStorage.getItem("virachat-theme")
@@ -60,6 +112,13 @@ window.addEventListener("phx:play_sound", (event) => {
     document.documentElement.setAttribute("data-theme", theme)
   } catch (e) {}
 })()
+
+// Register the push notification service worker as soon as possible.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js", {scope: "/"}).catch(() => {})
+  })
+}
 
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4)
@@ -72,10 +131,196 @@ function urlBase64ToUint8Array(base64String) {
 
 const Hooks = {}
 
+// 0. Call overlay controls (tap-to-reveal during video calls)
+Hooks.CallControls = CallControls
+
+// 0b. QR scanner (camera preview + native BarcodeDetector when available)
+Hooks.QrScanner = {
+  mounted() {
+    this.video = this.el.querySelector("[data-scan-video]")
+    this.status = this.el.querySelector("[data-scan-status]")
+    this.result = this.el.querySelector("[data-scan-result]")
+    this.stream = null
+    this.detector = null
+    this.timer = null
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      this.setStatus("Camera access is not available in this browser.")
+      return
+    }
+
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: "environment" }, audio: false })
+      .then((stream) => {
+        this.stream = stream
+        if (this.video) {
+          this.video.srcObject = stream
+          const play = this.video.play()
+          if (play && play.catch) play.catch(() => {})
+        }
+
+        if ("BarcodeDetector" in window) {
+          this.detector = new window.BarcodeDetector({ formats: ["qr_code"] })
+          this.setStatus("Scanning…")
+          this.scan()
+        } else {
+          this.setStatus("Live camera preview — automatic QR detection isn't supported in this browser.")
+        }
+      })
+      .catch(() => this.setStatus("Camera permission denied. Allow access and reopen this tab."))
+  },
+
+  scan() {
+    if (!this.detector || !this.video) return
+
+    this.detector
+      .detect(this.video)
+      .then((codes) => {
+        if (codes.length > 0) {
+          this.showResult(codes[0].rawValue)
+        } else {
+          this.timer = setTimeout(() => this.scan(), 400)
+        }
+      })
+      .catch(() => this.setStatus("Could not read the camera feed."))
+  },
+
+  showResult(value) {
+    if (this.result) {
+      this.result.textContent = value
+      this.result.classList.remove("hidden")
+    }
+    this.setStatus("QR code detected")
+    if (this.timer) clearTimeout(this.timer)
+  },
+
+  setStatus(text) {
+    if (this.status) this.status.textContent = text
+  },
+
+  destroyed() {
+    if (this.timer) clearTimeout(this.timer)
+    if (this.stream) this.stream.getTracks().forEach((track) => track.stop())
+  }
+}
+
+// 0c. Horizontal rows (recent chats): wheel + drag to scroll
+Hooks.ScrollRow = {
+  mounted() {
+    this.moved = false
+    this.dragging = false
+    this.startX = 0
+    this.startLeft = 0
+
+    this.onWheel = (e) => {
+      if (this.el.scrollWidth <= this.el.clientWidth) return
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        this.el.scrollLeft += e.deltaY
+        e.preventDefault()
+      }
+    }
+
+    this.onDown = (e) => {
+      if (this.el.scrollWidth <= this.el.clientWidth) return
+      this.dragging = true
+      this.moved = false
+      this.startX = e.clientX
+      this.startLeft = this.el.scrollLeft
+      this.el.classList.add("cursor-grabbing")
+    }
+
+    this.onMove = (e) => {
+      if (!this.dragging) return
+      const dx = e.clientX - this.startX
+      if (Math.abs(dx) > 4) this.moved = true
+      this.el.scrollLeft = this.startLeft - dx
+    }
+
+    this.onUp = () => {
+      this.dragging = false
+      this.el.classList.remove("cursor-grabbing")
+    }
+
+    this.onClick = (e) => {
+      if (this.moved) {
+        e.preventDefault()
+        e.stopPropagation()
+        this.moved = false
+      }
+    }
+
+    this.el.addEventListener("wheel", this.onWheel, { passive: false })
+    this.el.addEventListener("pointerdown", this.onDown)
+    window.addEventListener("pointermove", this.onMove)
+    window.addEventListener("pointerup", this.onUp)
+    this.el.addEventListener("click", this.onClick, true)
+  },
+
+  destroyed() {
+    this.el.removeEventListener("wheel", this.onWheel)
+    this.el.removeEventListener("pointerdown", this.onDown)
+    window.removeEventListener("pointermove", this.onMove)
+    window.removeEventListener("pointerup", this.onUp)
+    this.el.removeEventListener("click", this.onClick, true)
+  }
+}
+
+// 0d. Live countdown for disappearing messages
+Hooks.Countdown = {
+  mounted() {
+    this.update()
+    this.timer = setInterval(() => this.update(), 30000)
+  },
+
+  updated() {
+    this.update()
+  },
+
+  destroyed() {
+    clearInterval(this.timer)
+  },
+
+  update() {
+    const at = Date.parse(this.el.dataset.expiresAt + "Z")
+    if (!at) return
+
+    const label = this.el.querySelector("[data-countdown-label]")
+    if (!label) return
+
+    const diff = Math.floor((at - Date.now()) / 1000)
+
+    if (diff <= 0) {
+      label.textContent = "Expired"
+      return
+    }
+
+    const d = Math.floor(diff / 86400)
+    const h = Math.floor((diff % 86400) / 3600)
+    const m = Math.floor((diff % 3600) / 60)
+
+    if (d > 0) label.textContent = `Expires in ${d}d ${h}h`
+    else if (h > 0) label.textContent = `Expires in ${h}h ${m}m`
+    else label.textContent = `Expires in ${Math.max(m, 1)}m`
+  }
+}
+
+// 1. Dynamic Page Title Hook
+Hooks.UpdateTitle = {
+  mounted() { this.updateTitle() },
+  updated() { this.updateTitle() },
+  updateTitle() {
+    const count = this.el.dataset.count;
+    document.title = count > 0 ? `(${count}) ViraChat` : "ViraChat";
+  }
+}
+
+// 2. Infinite Scroll & 3. Scroll Retention
 Hooks.ScrollToBottom = {
   mounted() {
     this.el.scrollTop = this.el.scrollHeight
     this.btn = this.el.parentElement.querySelector("[data-scroll-btn]")
+    this.loadingOlder = false
+
     this.updateBtn = () => {
       if (!this.btn) return
       const atBottom = this.el.scrollHeight - this.el.scrollTop - this.el.clientHeight < 80
@@ -87,7 +332,18 @@ Hooks.ScrollToBottom = {
         this.btn.classList.add("flex")
       }
     }
-    this.el.addEventListener("scroll", this.updateBtn)
+
+    this.el.addEventListener("scroll", () => {
+      this.updateBtn()
+      // Infinite Scroll: Trigger when scrolled to the top
+      const hasMore = this.el.dataset.hasMore === "true"
+      if (this.el.scrollTop === 0 && hasMore && !this.loadingOlder) {
+        this.loadingOlder = true
+        this.previousHeight = this.el.scrollHeight
+        this.pushEvent("load_older_messages", {})
+      }
+    })
+
     if (this.btn) {
       this.btn.addEventListener("click", () => {
         this.el.scrollTo({top: this.el.scrollHeight, behavior: "smooth"})
@@ -96,7 +352,18 @@ Hooks.ScrollToBottom = {
     this.updateBtn()
   },
   updated() {
-    this.el.scrollTop = this.el.scrollHeight
+    if (this.loadingOlder) {
+      // Scroll Retention: Adjust scroll position so older messages don't cause a jump
+      const newHeight = this.el.scrollHeight
+      this.el.scrollTop = newHeight - this.previousHeight
+      this.loadingOlder = false
+    } else {
+      // Auto-scroll if we were already near bottom
+      const atBottom = this.el.scrollHeight - this.el.scrollTop - this.el.clientHeight < 80
+      if (atBottom) {
+        this.el.scrollTop = this.el.scrollHeight
+      }
+    }
     if (this.updateBtn) this.updateBtn()
   }
 }
@@ -119,13 +386,9 @@ Hooks.EmojiPicker = {
     if (picker) {
       picker.addEventListener("emoji-click", (event) => {
         const emoji = event.detail.unicode
-        
-        // Insert at cursor position
         const startPos = input.selectionStart
         const endPos = input.selectionEnd
         input.value = input.value.substring(0, startPos) + emoji + input.value.substring(endPos, input.value.length)
-        
-        // Trigger LiveView
         input.focus()
         input.setSelectionRange(startPos + emoji.length, startPos + emoji.length)
         input.dispatchEvent(new Event("input", {bubbles: true}))
@@ -210,6 +473,48 @@ Hooks.ImageLightbox = {
   }
 }
 
+// Position the message action menu (fixed, so it is never clipped by the
+// scrolling message list) next to its message, flipping above when there is
+// not enough room below.
+Hooks.MessageMenu = {
+  mounted() {
+    this.place()
+    this.onScroll = () => this.pushEvent("close_all_menus", {})
+    document.addEventListener("scroll", this.onScroll, true)
+  },
+  updated() {
+    this.place()
+  },
+  destroyed() {
+    document.removeEventListener("scroll", this.onScroll, true)
+  },
+  place() {
+    const anchor = document.getElementById(this.el.dataset.anchor)
+    if (!anchor) return
+
+    this.el.style.position = "fixed"
+    this.el.style.bottom = "auto"
+    this.el.style.marginBottom = "0px"
+
+    const rect = anchor.getBoundingClientRect()
+    const gap = 8
+    const width = this.el.offsetWidth
+    const height = this.el.offsetHeight
+
+    let top = rect.bottom + gap
+    if (top + height > window.innerHeight - gap && rect.top - height - gap > gap) {
+      top = rect.top - height - gap
+    }
+
+    let left = this.el.dataset.align === "right" ? rect.right - width : rect.left
+    left = Math.max(gap, Math.min(left, window.innerWidth - width - gap))
+    top = Math.max(gap, Math.min(top, window.innerHeight - height - gap))
+
+    this.el.style.top = `${top}px`
+    this.el.style.left = `${left}px`
+  }
+}
+
 Hooks.DraftMessages = {
   mounted() {
     const form = this.el.closest("form")
@@ -233,6 +538,15 @@ Hooks.DraftMessages = {
 
     form.addEventListener("submit", () => {
       localStorage.removeItem(key)
+    })
+
+    // The server clears the form on a successful send, but LiveView does not
+    // patch the value of a focused input — clear it here instead.
+    this.handleEvent("clear_composer", () => {
+      input.value = ""
+      localStorage.removeItem(key)
+      this.el.querySelectorAll("[data-mention-panel]").forEach((panel) => panel.classList.add("hidden"))
+      input.focus()
     })
   }
 }
@@ -396,19 +710,142 @@ Hooks.EnablePush = {
     this.el.addEventListener("click", (e) => { e.preventDefault(); this.enable() })
   },
   async enable() {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      this.pushEvent("push_failed", {reason: "unsupported"})
+      return
+    }
+
+    const meta = document.querySelector("meta[name='vapid-public-key']")
+    const vapidKey = meta && meta.getAttribute("content")
+    if (!vapidKey) {
+      this.pushEvent("push_failed", {reason: "not_configured"})
+      return
+    }
+
     try {
       const permission = await Notification.requestPermission()
-      if (permission !== "granted") return
+      if (permission !== "granted") {
+        this.pushEvent("push_failed", {reason: "permission_denied"})
+        return
+      }
       const reg = await navigator.serviceWorker.register("/sw.js", {scope: "/"})
       await navigator.serviceWorker.ready
-      const vapidKey = document.querySelector("meta[name='vapid-public-key']").getAttribute("content")
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidKey)
       })
       this.pushEvent("push_subscribed", {subscription: sub.toJSON()})
-    } catch (err) {}
+    } catch (err) {
+      this.pushEvent("push_failed", {reason: "subscribe_failed"})
+    }
+  }
+}
+
+Hooks.VoiceCall = {
+  mounted() {
+    let remoteVideo = document.getElementById("remote-video")
+    let localVideo = document.getElementById("local-video")
+    let remoteAudio = document.getElementById("remote-audio")
+    
+    if (!remoteAudio) {
+      remoteAudio = document.createElement("audio")
+      remoteAudio.id = "remote-audio"
+      remoteAudio.autoplay = true
+      document.body.appendChild(remoteAudio)
+    }
+
+    let pc = null;
+    let localStream = null;
+
+    const initPeerConnection = () => {
+      if (pc) return pc;
+      
+      pc = new RTCPeerConnection({
+        iceServers: buildIceServers()
+      });
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) { this.pushEvent("webrtc_signal", { candidate: event.candidate }); }
+      };
+
+      pc.ontrack = (event) => {
+        console.log("Received remote track:", event.track.kind);
+        if (event.track.kind === "video" && remoteVideo) {
+          remoteVideo.srcObject = event.streams[0];
+        } else if (event.track.kind === "audio") {
+          remoteAudio.srcObject = event.streams[0];
+        }
+      };
+
+      return pc;
+    };
+
+    this.handleEvent("webrtc_signal", async (data) => {
+      const peer = initPeerConnection();
+      try {
+        if (data.type === "offer") {
+          await peer.setRemoteDescription(new RTCSessionDescription(data));
+          const answer = await peer.createAnswer();
+          await peer.setLocalDescription(answer);
+          this.pushEvent("webrtc_signal", answer);
+        } else if (data.type === "answer") {
+          await peer.setRemoteDescription(new RTCSessionDescription(data));
+        } else if (data.candidate) {
+          await peer.addIceCandidate(new RTCIceCandidate(data.candidate));
+        }
+      } catch (err) {
+        console.error("WebRTC Signal Error:", err);
+      }
+    });
+
+    this.handleEvent("start_webrtc_call", async (data) => {
+      const peer = initPeerConnection();
+      try {
+        const constraints = data.call_type === "video" 
+          ? { audio: true, video: true } 
+          : { audio: true };
+
+        localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        if (localVideo && data.call_type === "video") {
+          localVideo.srcObject = localStream;
+        }
+        
+        localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
+
+        if (data.is_caller) {
+          const offer = await peer.createOffer();
+          await peer.setLocalDescription(offer);
+          this.pushEvent("webrtc_signal", offer);
+        }
+      } catch (err) {
+        console.error("Media access denied:", err);
+        this.pushEvent("call_failed", { reason: "media_denied" });
+      }
+    });
+
+    this.handleEvent("end_webrtc_call", () => {
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+      if (pc) {
+        pc.close();
+        pc = null;
+      }
+      if (remoteVideo) remoteVideo.srcObject = null;
+      remoteAudio.srcObject = null;
+    });
+
+    this.handleEvent("toggle_mute", () => {
+      if (localStream) {
+        const audioTrack = localStream.getAudioTracks()[0];
+        if (audioTrack) {
+          audioTrack.enabled = !audioTrack.enabled;
+          this.pushEvent("mute_state_changed", { muted: !audioTrack.enabled });
+        }
+      }
+    });
   }
 }
 

@@ -1,0 +1,328 @@
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <div class="min-h-screen bg-surface dark:bg-[#0b0b0d]">
+    <header class="sticky top-0 z-10 border-b border-line bg-white/95 backdrop-blur dark:border-[#222224] dark:bg-[#0d0d0d]/95">
+      <div class="mx-auto flex max-w-4xl items-center gap-3 px-4 py-4 sm:px-6">
+        <.link
+          navigate={~p"/chat"}
+          aria-label="Back to chats"
+          class="flex h-9 w-9 items-center justify-center rounded-lg text-body transition hover:bg-surface-2 dark:hover:bg-[#161616]"
+        >
+          <.icon name="hero-arrow-left" class="size-5" />
+        </.link>
+
+        <div class="flex items-center gap-2.5">
+          <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-soft text-brand dark:bg-[#1b1530]">
+            <.icon name="hero-signal" class="size-4" />
+          </div>
+          <h1 class="text-[18px] font-bold tracking-tight text-ink dark:text-white">Status</h1>
+        </div>
+
+        <button
+          phx-click="toggle_new"
+          class="ml-auto flex items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm shadow-brand/30 transition hover:bg-brand-600"
+        >
+          <.icon name="hero-plus" class="size-4" /> Add status
+        </button>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-4xl px-4 py-6 sm:px-6">
+      <div class="grid gap-5 lg:grid-cols-[280px_1fr]">
+        <div class="space-y-4">
+          <div class="rounded-2xl border border-line bg-white p-5 text-center dark:border-[#242424] dark:bg-[#141414]">
+            <div class="mx-auto w-fit rounded-full p-[3px] ring-2 ring-brand">
+              <%= if @current_user.avatar_url do %>
+                <img src={@current_user.avatar_url} class="h-20 w-20 rounded-full object-cover" />
+              <% else %>
+                <div class={"flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br text-xl font-bold text-white #{ViraChat.Accounts.User.avatar_gradient(@current_user)}"}>
+                  {String.first(@current_user.email) |> String.upcase()}
+                </div>
+              <% end %>
+            </div>
+
+            <p class="mt-3 text-[14px] font-bold text-ink dark:text-white">My status</p>
+            <p class="mt-0.5 text-[11.5px] text-body">
+              {length(mine(@statuses, @current_user))} update(s) · disappears in 24h
+            </p>
+
+            <button
+              phx-click="toggle_new"
+              class="mt-3 w-full rounded-xl border border-brand/30 bg-brand-soft px-3 py-2 text-[12px] font-semibold text-brand transition hover:bg-brand/10"
+            >
+              Add to my status
+            </button>
+          </div>
+
+          <div class="rounded-2xl border border-line bg-white p-4 dark:border-[#242424] dark:bg-[#141414]">
+            <p class="text-[11px] font-bold uppercase tracking-[0.08em] text-muted">About status</p>
+            <p class="mt-1.5 text-[11.5px] leading-relaxed text-body">
+              Statuses are visible to everyone you chat with and disappear automatically after 24 hours.
+            </p>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="overflow-hidden rounded-2xl border border-line bg-white dark:border-[#242424] dark:bg-[#141414]">
+            <div class="flex items-center justify-between border-b border-line px-4 py-3 dark:border-[#242424]">
+              <p class="text-[11px] font-bold uppercase tracking-[0.08em] text-muted">Recent updates</p>
+              <span class="rounded-full bg-surface-2 px-2 py-0.5 text-[10.5px] font-semibold text-body dark:bg-[#161616]">
+                {length(@statuses)}
+              </span>
+            </div>
+
+            <%= if @statuses == [] do %>
+              <div class="px-6 py-14 text-center">
+                <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-soft text-brand dark:bg-[#1b1530]">
+                  <.icon name="hero-signal" class="size-6" />
+                </div>
+                <p class="text-[13px] font-semibold text-ink dark:text-white">No status updates yet</p>
+                <p class="mt-1 text-[11.5px] text-body">
+                  Share a text or photo status — it stays for 24 hours.
+                </p>
+                <button
+                  phx-click="toggle_new"
+                  class="mt-4 rounded-xl bg-brand px-4 py-2 text-[12px] font-semibold text-white hover:bg-brand-600"
+                >
+                  Add status
+                </button>
+              </div>
+            <% else %>
+              <%= if mine(@statuses, @current_user) != [] do %>
+                <p class="bg-surface-2/60 px-4 pb-1 pt-3 text-[9.5px] font-bold uppercase tracking-[0.1em] text-muted dark:bg-[#161616]">
+                  Mine
+                </p>
+                <%= for status <- mine(@statuses, @current_user) do %>
+                  <button
+                    type="button"
+                    phx-click="view_status"
+                    phx-value-id={status.id}
+                    class="flex w-full items-center gap-3 border-b border-line px-4 py-3 text-left transition last:border-0 hover:bg-surface-2 dark:border-[#242424] dark:hover:bg-[#1c1c1c]"
+                  >
+                    <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand dark:bg-[#1b1530]">
+                      <.icon name="hero-user" class="size-4" />
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <p class="truncate text-[12.5px] font-semibold text-ink dark:text-white">
+                        My status
+                      </p>
+                      <p class="text-[11.5px] text-body">
+                        {age_label(status.inserted_at)} ·
+                        {length(status.views)} viewer(s)
+                      </p>
+                    </div>
+                    <span class="h-9 w-9 flex-shrink-0 overflow-hidden rounded-lg bg-brand">
+                      <%= if status.media_url do %>
+                        <img src={status.media_url} class="h-full w-full object-cover" />
+                      <% end %>
+                    </span>
+                  </button>
+                <% end %>
+              <% end %>
+
+              <%= for group <- grouped_by_user(others(@statuses, @current_user)) do %>
+                <% first = List.first(group) %>
+                <button
+                  type="button"
+                  phx-click="view_status"
+                  phx-value-id={first.id}
+                  class="flex w-full items-center gap-3 border-b border-line px-4 py-3 text-left transition last:border-0 hover:bg-surface-2 dark:border-[#242424] dark:hover:bg-[#1c1c1c]"
+                >
+                  <div class="rounded-full p-[2px] ring-2 ring-brand">
+                    <%= if first.user.avatar_url do %>
+                      <img src={first.user.avatar_url} class="h-10 w-10 rounded-full object-cover" />
+                    <% else %>
+                      <div class={"flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br text-[11px] font-bold text-white #{ViraChat.Accounts.User.avatar_gradient(first.user)}"}>
+                        {String.first(first.user.email) |> String.upcase()}
+                      </div>
+                    <% end %>
+                  </div>
+
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-[12.5px] font-semibold text-ink dark:text-white">
+                      {display_name(first.user)}
+                    </p>
+                    <p class="truncate text-[11.5px] text-body">
+                      {length(group)} update(s) · {age_label(first.inserted_at)}
+                    </p>
+                  </div>
+
+                  <span class="h-9 w-9 flex-shrink-0 overflow-hidden rounded-lg bg-brand">
+                    <%= if first.media_url do %>
+                      <img src={first.media_url} class="h-full w-full object-cover" />
+                    <% else %>
+                      <span class="flex h-full w-full items-center justify-center text-[9px] font-bold text-white">
+                        {String.slice(status_preview(first), 0, 2)}
+                      </span>
+                    <% end %>
+                  </span>
+                </button>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <%= if @show_new do %>
+      <div class="fixed inset-0 z-40 bg-ink/40 backdrop-blur-sm" phx-click="toggle_new"></div>
+
+      <div class="fixed left-1/2 top-1/2 z-50 w-[420px] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-line bg-white p-5 shadow-pop dark:border-[#2a2a2a] dark:bg-[#141414]">
+        <div class="mb-4 flex items-center justify-between">
+          <h2 class="text-[14px] font-bold text-ink dark:text-white">New status</h2>
+          <button
+            phx-click="toggle_new"
+            aria-label="Close"
+            class="flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:bg-surface-2 dark:hover:bg-[#1c1c1c]"
+          >
+            <.icon name="hero-x-mark" class="size-4" />
+          </button>
+        </div>
+
+        <.form for={@form} phx-change="validate" phx-submit="create_status" class="space-y-4">
+          <textarea
+            name="content"
+            rows="3"
+            maxlength="300"
+            placeholder="What's on your mind?"
+            class="w-full rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-[13px] text-ink outline-none transition placeholder:text-muted focus:border-brand/40 focus:bg-white focus:ring-2 focus:ring-brand/15 dark:border-[#2a2a2a] dark:bg-[#161616] dark:text-white dark:focus:bg-[#111]"
+          ><%= @form[:content].value %></textarea>
+
+          <div>
+            <p class="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-muted">
+              Background
+            </p>
+            <div class="flex flex-wrap gap-2">
+              <%= for color <- ["#6338F6", "#0EA5E9", "#10B981", "#F59E0B", "#EF4444", "#111827"] do %>
+                <label class="cursor-pointer">
+                  <input
+                    type="radio"
+                    name="background"
+                    value={color}
+                    checked={(@form[:background].value || "#6338F6") == color}
+                    class="peer sr-only"
+                  />
+                  <span
+                    class="block h-8 w-8 rounded-full ring-offset-2 transition peer-checked:ring-2 peer-checked:ring-ink dark:ring-offset-[#141414] dark:peer-checked:ring-white"
+                    style={"background-color: #{color}"}
+                  >
+                  </span>
+                </label>
+              <% end %>
+            </div>
+          </div>
+
+          <div>
+            <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-brand/40 px-4 py-2.5 text-[12.5px] font-semibold text-brand transition hover:bg-brand-soft">
+              <.icon name="hero-photo" class="size-4" /> Add a photo
+              <.live_file_input upload={@uploads.status_image} class="hidden" />
+            </label>
+
+            <%= for entry <- @uploads.status_image.entries do %>
+              <div class="mt-2 flex items-center gap-2 rounded-xl bg-surface-2 p-2 dark:bg-[#1c1c1c]">
+                <.live_img_preview entry={entry} class="h-14 w-14 rounded-lg object-cover" />
+                <span class="min-w-0 flex-1 truncate text-[11.5px] text-body">{entry.client_name}</span>
+                <button
+                  type="button"
+                  phx-click="cancel-upload"
+                  phx-value-ref={entry.ref}
+                  class="text-danger"
+                  aria-label="Remove image"
+                >
+                  <.icon name="hero-x-mark" class="size-4" />
+                </button>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="flex justify-end gap-2 border-t border-line pt-4 dark:border-[#242424]">
+            <button
+              type="button"
+              phx-click="toggle_new"
+              class="rounded-xl px-4 py-2.5 text-[12.5px] font-semibold text-body hover:text-ink dark:hover:text-white"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-[12.5px] font-semibold text-white shadow-sm shadow-brand/30 hover:bg-brand-600"
+            >
+              <.icon name="hero-paper-airplane" class="size-4" /> Share status
+            </button>
+          </div>
+        </.form>
+      </div>
+    <% end %>
+
+    <%= if @viewing do %>
+      <div class="fixed inset-0 z-40 bg-ink/70 backdrop-blur-sm" phx-click="close_viewer"></div>
+
+      <div class="fixed left-1/2 top-1/2 z-50 w-[360px] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl shadow-pop">
+        <div class="relative flex min-h-[420px] flex-col p-5 text-white" style={"background-color: #{@viewing.background}"}>
+          <div class="flex items-center gap-2.5">
+            <%= if @viewing.user.avatar_url do %>
+              <img src={@viewing.user.avatar_url} class="h-9 w-9 rounded-full object-cover" />
+            <% else %>
+              <div class={"flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-[11px] font-bold #{ViraChat.Accounts.User.avatar_gradient(@viewing.user)}"}>
+                {String.first(@viewing.user.email) |> String.upcase()}
+              </div>
+            <% end %>
+            <div class="min-w-0">
+              <p class="truncate text-[12.5px] font-semibold">{display_name(@viewing.user)}</p>
+              <p class="text-[10.5px] text-white/70">{age_label(@viewing.inserted_at)}</p>
+            </div>
+            <button
+              phx-click="close_viewer"
+              aria-label="Close"
+              class="ml-auto flex h-7 w-7 items-center justify-center rounded-lg bg-white/15 text-white hover:bg-white/25"
+            >
+              <.icon name="hero-x-mark" class="size-4" />
+            </button>
+          </div>
+
+          <div class="flex flex-1 flex-col items-center justify-center gap-3 py-6">
+            <%= if @viewing.media_url do %>
+              <img src={@viewing.media_url} class="max-h-72 w-full rounded-xl object-contain" />
+            <% end %>
+            <%= if @viewing.content && @viewing.content != "" do %>
+              <p class="whitespace-pre-wrap text-center text-[16px] font-medium leading-relaxed">
+                {@viewing.content}
+              </p>
+            <% end %>
+          </div>
+
+          <%= if @viewing.user_id == @current_user.id do %>
+            <div class="rounded-xl bg-black/15 p-3">
+              <div class="flex items-center justify-between">
+                <p class="text-[10.5px] font-bold uppercase tracking-[0.08em] text-white/70">
+                  Viewed by {length(@viewing.views)}
+                </p>
+                <button
+                  phx-click="delete_status"
+                  phx-value-id={@viewing.id}
+                  data-confirm="Delete this status?"
+                  class="text-[10.5px] font-semibold text-white/80 hover:text-white"
+                >
+                  Delete
+                </button>
+              </div>
+
+              <%= if @viewing.views != [] do %>
+                <div class="mt-2 flex flex-wrap gap-2">
+                  <%= for view <- @viewing.views do %>
+                    <div class="flex items-center gap-1.5 rounded-full bg-white/15 px-2 py-1">
+                      <span class="text-[10px] font-semibold">{display_name(view.viewer)}</span>
+                    </div>
+                  <% end %>
+                </div>
+              <% else %>
+                <p class="mt-1 text-[11px] text-white/70">No views yet.</p>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="text-center text-[10.5px] text-white/60">Status disappears after 24 hours</p>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</Layouts.app>

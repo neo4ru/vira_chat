@@ -8,6 +8,7 @@ defmodule ViraChat.Chat.Message do
     field :edited_at, :utc_datetime
     field :deleted_at, :utc_datetime
     field :link_preview, :map
+    field :expires_at, :utc_datetime
 
     belongs_to :user, ViraChat.Accounts.User
     belongs_to :conversation, ViraChat.Chat.Conversation
@@ -18,11 +19,20 @@ defmodule ViraChat.Chat.Message do
     timestamps()
   end
 
-def changeset(message, attrs) do
-  message
-  |> cast(attrs, [:content, :user_id, :conversation_id, :media_url, :reply_to_id, :forwarded_from_id, :link_preview])
-  |> validate_required([:user_id, :conversation_id])
-end
+  def changeset(message, attrs) do
+    message
+    |> cast(attrs, [
+      :content,
+      :user_id,
+      :conversation_id,
+      :media_url,
+      :reply_to_id,
+      :forwarded_from_id,
+      :link_preview,
+      :expires_at
+    ])
+    |> validate_required([:user_id, :conversation_id])
+  end
 
   def edit_changeset(message, attrs) do
     message
@@ -39,6 +49,5 @@ end
   def deleted?(%__MODULE__{}), do: true
 
   def edited?(%__MODULE__{edited_at: nil}), do: false
-  def edited?(%__MODULE__{deleted_at: nil}), do: true
-  def edited?(%__MODULE__{}), do: false
+  def edited?(%__MODULE__{}), do: true
 end

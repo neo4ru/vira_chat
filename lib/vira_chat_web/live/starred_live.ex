@@ -37,7 +37,9 @@ defmodule ViraChatWeb.StarredLive do
 
   defp conversation_title(conversation, current_user) do
     case conversation.type do
-      "group" -> conversation.title || "Group Chat"
+      "group" ->
+        conversation.title || "Group Chat"
+
       "private" ->
         other = Enum.find(conversation.users || [], fn u -> u.id != current_user.id end)
         (other && User.display_name(other)) || "Chat"

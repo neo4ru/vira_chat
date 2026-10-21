@@ -1,11 +1,52 @@
-// ViraChat service worker — handles push events and notification clicks.
+// ViraChat service worker — PWA install, asset caching, push notifications.
+
+const CACHE = "virachat-v2"
+const PRECACHE = [
+  "/assets/css/app.css",
+  "/assets/js/app.js",
+  "/images/icons/icon-192.png",
+  "/images/logo.svg"
+]
 
 self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)).catch(() => {})
+  )
   self.skipWaiting()
 })
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim())
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+  )
+})
+
+// Network-first for app assets with a cache fallback; everything else live.
+self.addEventListener("fetch", (event) => {
+  const request = event.request
+
+  if (request.method !== "GET") return
+
+  const url = new URL(request.url)
+  if (url.origin !== self.location.origin) return
+
+  const isAsset = url.pathname.startsWith("/assets/") || url.pathname.startsWith("/images/")
+  if (!isAsset) return
+
+  event.respondWith(
+    fetch(request)
+      .then((response) => {
+        if (response && response.ok) {
+          const copy = response.clone()
+          caches.open(CACHE).then((cache) => cache.put(request, copy))
+        }
+        return response
+      })
+      .catch(() => caches.match(request))
+  )
 })
 
 self.addEventListener("push", (event) => {
@@ -27,8 +68,8 @@ self.addEventListener("push", (event) => {
 
       return self.registration.showNotification(data.title, {
         body: data.body,
-        icon: "/images/logo.svg",
-        badge: "/images/logo.svg",
+        icon: "/images/icons/icon-192.png",
+        badge: "/images/icons/icon-192.png",
         data: { url: data.url }
       })
     })

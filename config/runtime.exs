@@ -20,6 +20,12 @@ if System.get_env("PHX_SERVER") do
   config :vira_chat, ViraChatWeb.Endpoint, server: true
 end
 
+# Optional TURN server for WebRTC calls behind strict NATs.
+config :vira_chat, :turn,
+  url: System.get_env("TURN_URL"),
+  username: System.get_env("TURN_USERNAME"),
+  credential: System.get_env("TURN_CREDENTIAL")
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||
@@ -116,4 +122,15 @@ if config_env() == :prod do
   #     config :swoosh, :api_client, Swoosh.ApiClient.Req
   #
   # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
+
+  # ## Web push notifications
+  #
+  # Generate a key pair with `mix generate.vapid.keys` and provide it through
+  # the environment. Without a key pair, push notifications are skipped.
+  if vapid_public_key = System.get_env("VAPID_PUBLIC_KEY") do
+    config :web_push_elixir,
+      vapid_public_key: vapid_public_key,
+      vapid_private_key: System.get_env("VAPID_PRIVATE_KEY"),
+      vapid_subject: System.get_env("VAPID_SUBJECT") || "mailto:admin@example.com"
+  end
 end

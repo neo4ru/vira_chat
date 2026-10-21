@@ -26,8 +26,15 @@ defmodule ViraChatWeb.AdminLive.Reports do
 
     case Reports.resolve_report(report_id, admin.id, "resolved") do
       {:ok, _} ->
-        Admin.log_action(admin, nil, "resolve_report", %{"report_id" => report_id, "status" => "resolved"})
-        reports = Reports.list_reports(status: if(socket.assigns.filter == "", do: nil, else: socket.assigns.filter))
+        Admin.log_action(admin, nil, "resolve_report", %{
+          "report_id" => report_id,
+          "status" => "resolved"
+        })
+
+        reports =
+          Reports.list_reports(
+            status: if(socket.assigns.filter == "", do: nil, else: socket.assigns.filter)
+          )
 
         {:noreply,
          socket
@@ -46,8 +53,15 @@ defmodule ViraChatWeb.AdminLive.Reports do
 
     case Reports.resolve_report(report_id, admin.id, "dismissed") do
       {:ok, _} ->
-        Admin.log_action(admin, nil, "dismiss_report", %{"report_id" => report_id, "status" => "dismissed"})
-        reports = Reports.list_reports(status: if(socket.assigns.filter == "", do: nil, else: socket.assigns.filter))
+        Admin.log_action(admin, nil, "dismiss_report", %{
+          "report_id" => report_id,
+          "status" => "dismissed"
+        })
+
+        reports =
+          Reports.list_reports(
+            status: if(socket.assigns.filter == "", do: nil, else: socket.assigns.filter)
+          )
 
         {:noreply,
          socket
@@ -66,13 +80,23 @@ defmodule ViraChatWeb.AdminLive.Reports do
     report = Enum.find(socket.assigns.reports, fn r -> r.id == report_id end)
 
     cond do
-      is_nil(report) -> {:noreply, put_flash(socket, :error, "Report not found")}
-      is_nil(report.reported_user) -> {:noreply, put_flash(socket, :error, "Reported user no longer exists")}
-      report.reported_user.id == admin.id -> {:noreply, put_flash(socket, :error, "You cannot ban yourself")}
+      is_nil(report) ->
+        {:noreply, put_flash(socket, :error, "Report not found")}
+
+      is_nil(report.reported_user) ->
+        {:noreply, put_flash(socket, :error, "Reported user no longer exists")}
+
+      report.reported_user.id == admin.id ->
+        {:noreply, put_flash(socket, :error, "You cannot ban yourself")}
+
       true ->
         Admin.ban_user(report.reported_user, admin)
         Reports.resolve_report(report_id, admin.id, "resolved")
-        reports = Reports.list_reports(status: if(socket.assigns.filter == "", do: nil, else: socket.assigns.filter))
+
+        reports =
+          Reports.list_reports(
+            status: if(socket.assigns.filter == "", do: nil, else: socket.assigns.filter)
+          )
 
         {:noreply,
          socket

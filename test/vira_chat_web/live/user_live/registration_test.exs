@@ -8,7 +8,7 @@ defmodule ViraChatWeb.UserLive.RegistrationTest do
     test "renders registration page", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/users/register")
 
-      assert html =~ "Register"
+      assert html =~ "Create your account"
       assert html =~ "Log in"
     end
 
@@ -17,7 +17,7 @@ defmodule ViraChatWeb.UserLive.RegistrationTest do
         conn
         |> log_in_user(user_fixture())
         |> live(~p"/users/register")
-        |> follow_redirect(conn, ~p"/")
+        |> follow_redirect(conn, ~p"/chat")
 
       assert {:ok, _conn} = result
     end
@@ -30,7 +30,7 @@ defmodule ViraChatWeb.UserLive.RegistrationTest do
         |> element("#registration_form")
         |> render_change(user: %{"email" => "with spaces"})
 
-      assert result =~ "Register"
+      assert result =~ "Create your account"
       assert result =~ "must have the @ sign and no spaces"
     end
   end
@@ -67,16 +67,16 @@ defmodule ViraChatWeb.UserLive.RegistrationTest do
   end
 
   describe "registration navigation" do
-    test "redirects to login page when the Log in button is clicked", %{conn: conn} do
+    test "redirects to login page when the Log in link is clicked", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/users/register")
 
       {:ok, _login_live, login_html} =
         lv
-        |> element("main a", "Log in")
+        |> element("a", "Log in")
         |> render_click()
         |> follow_redirect(conn, ~p"/users/log-in")
 
-      assert login_html =~ "Log in"
+      assert login_html =~ "Welcome back"
     end
   end
 end

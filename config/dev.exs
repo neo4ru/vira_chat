@@ -19,7 +19,7 @@ config :vira_chat, ViraChat.Repo,
 config :vira_chat, ViraChatWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
-  http: [ip: {127, 0, 0, 1}, port: String.to_integer(System.get_env("PORT") || "4000")],
+  http: [ip: {0, 0, 0, 0}, port: String.to_integer(System.get_env("PORT") || "4000")],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
@@ -87,5 +87,16 @@ config :phoenix_live_view,
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
 
-config :phoenix_live_view, :colocated_js,
-  disable_symlink_warning: true
+config :phoenix_live_view, :colocated_js, disable_symlink_warning: true
+
+# Web push (development keys). Generate your own pair with:
+#
+#     mix generate.vapid.keys
+#
+# or export VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY before starting the server.
+config :web_push_elixir,
+  vapid_public_key:
+    System.get_env("VAPID_PUBLIC_KEY") ||
+      "BKozTm-4kjgsf5xQOJTsaXP51uV7z9DAOmOO7u-SDzC85-ILJSs7szNrRmPKfEI8-dlBCcZZvxfISTTgtg3Uyyk",
+  vapid_private_key:
+    System.get_env("VAPID_PRIVATE_KEY") || "9wa7MNq5hs_4AQnJ3XGnSb1jIj7MDV-XAMOmewCZ9so"

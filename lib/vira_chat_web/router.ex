@@ -17,14 +17,14 @@ defmodule ViraChatWeb.Router do
     plug :accepts, ["json"]
   end
 
- scope "/", ViraChatWeb do
-  pipe_through :browser
+  scope "/", ViraChatWeb do
+    pipe_through :browser
 
-  live_session :public,
-    on_mount: [{ViraChatWeb.UserAuth, :mount_current_scope}] do
-    live "/", LandingLive, :index
+    live_session :public,
+      on_mount: [{ViraChatWeb.UserAuth, :mount_current_scope}] do
+      live "/", LandingLive, :index
+    end
   end
-end
 
   if Application.compile_env(:vira_chat, :dev_routes) do
     import Phoenix.LiveDashboard.Router
@@ -52,22 +52,23 @@ end
 
       live "/users/profile", ProfileLive, :edit
       live "/starred", StarredLive, :index
+      live "/calls", CallsLive, :index
+      live "/status", StatusLive, :index
       live "/chat", ChatLive, :index
       live "/chat/:id", ChatLive, :show
-
     end
 
     live_session :admin,
-  on_mount: [
-    {ViraChatWeb.UserAuth, :mount_current_scope},
-    {ViraChatWeb.UserAuth, :require_admin}
-  ] do
-  live "/admin", AdminLive.Dashboard, :index
-  live "/admin/users", AdminLive.Users, :index
-  live "/admin/conversations", AdminLive.Conversations, :index
-  live "/admin/audit", AdminLive.Audit, :index
-  live "/admin/reports", AdminLive.Reports, :index
-end
+      on_mount: [
+        {ViraChatWeb.UserAuth, :mount_current_scope},
+        {ViraChatWeb.UserAuth, :require_admin}
+      ] do
+      live "/admin", AdminLive.Dashboard, :index
+      live "/admin/users", AdminLive.Users, :index
+      live "/admin/conversations", AdminLive.Conversations, :index
+      live "/admin/audit", AdminLive.Audit, :index
+      live "/admin/reports", AdminLive.Reports, :index
+    end
 
     post "/users/update-password", UserSessionController, :update_password
   end
@@ -80,6 +81,8 @@ end
       live "/users/register", UserLive.Registration, :new
       live "/users/log-in", UserLive.Login, :new
       live "/users/log-in/:token", UserLive.Confirmation, :new
+      live "/users/reset-password", UserLive.ResetPassword, :new
+      live "/users/reset-password/:token", UserLive.ResetPassword, :edit
     end
 
     post "/users/log-in", UserSessionController, :create

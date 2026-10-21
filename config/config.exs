@@ -77,7 +77,7 @@ config :phoenix, :json_library, Jason
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
 
-config :web_push_elixir,
-  vapid_public_key: "PASTE_PUBLIC_KEY_HERE",
-  vapid_private_key: "PASTE_PRIVATE_KEY_HERE",
-  vapid_subject: "mailto:admin@virachat.local"
+# Web push notifications. The VAPID key pair is configured per environment
+# (config/dev.exs for development, VAPID_* environment variables in production).
+# Without a key pair, push notifications are skipped.
+config :web_push_elixir, vapid_subject: "mailto:admin@virachat.local"

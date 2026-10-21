@@ -21,7 +21,14 @@ defmodule ViraChat.Admin.Report do
 
   def changeset(report, attrs) do
     report
-    |> cast(attrs, [:reporter_id, :reported_user_id, :message_id, :conversation_id, :reason, :details])
+    |> cast(attrs, [
+      :reporter_id,
+      :reported_user_id,
+      :message_id,
+      :conversation_id,
+      :reason,
+      :details
+    ])
     |> validate_required([:reporter_id, :reason])
     |> validate_inclusion(:reason, @reasons)
     |> validate_length(:details, max: 500)

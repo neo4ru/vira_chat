@@ -1,164 +1,680 @@
-<div class="min-h-screen bg-slate-50 dark:bg-slate-950">
-  <div class="max-w-2xl mx-auto">
-    <!-- Banner -->
-    <div class="h-40 bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600 relative"></div>
-
-    <!-- Avatar + name -->
-    <div class="px-6 pb-6 -mt-16 relative">
-      <div class="flex items-end gap-4 mb-6">
-        <%= if @current_user.avatar_url do %>
-          <img src={@current_user.avatar_url} class="w-28 h-28 rounded-full object-cover border-4 border-slate-50 dark:border-slate-950 shadow-lg" />
-        <% else %>
-          <div class="w-28 h-28 rounded-full bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white text-4xl font-bold border-4 border-slate-50 dark:border-slate-950 shadow-lg">
-            <%= String.first(@current_user.email) |> String.upcase() %>
-          </div>
-        <% end %>
-
-        <div class="flex-1 min-w-0 pb-3">
-          <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100 truncate">
-            <%= ViraChat.Accounts.User.display_name(@current_user) %>
-          </h1>
-          <p class="text-sm text-slate-500 dark:text-slate-400 truncate"><%= @current_user.email %></p>
-        </div>
-      </div>
-
-      <!-- Action buttons -->
-      <div class="flex gap-2 mb-6">
-        <button
-          phx-click="toggle_edit"
-          class="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition"
-        >
-          <%= if @editing, do: "Close editor", else: "Edit profile" %>
-        </button>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <div class="min-h-screen bg-surface pb-16 dark:bg-[#0b0b0d]">
+    <div class="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+      <div class="mb-4 flex items-center justify-between">
         <.link
           navigate={~p"/chat"}
-          class="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+          class="flex items-center gap-2 text-[13px] font-medium text-body transition hover:text-brand"
         >
-          Back to chat
+          <.icon name="hero-arrow-left" class="size-4" /> Back to chats
         </.link>
+        <div class="flex items-center gap-4">
+          <.link
+            navigate={~p"/users/settings"}
+            class="text-[13px] font-medium text-body transition hover:text-brand"
+          >
+            Settings
+          </.link>
+          <.link
+            href={~p"/users/log-out"}
+            method="delete"
+            class="text-[13px] font-medium text-body transition hover:text-danger"
+          >
+            Log out
+          </.link>
+        </div>
       </div>
 
-      <!-- Bio (read-only view) -->
-      <%= if !@editing do %>
-        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 mb-4">
-          <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">About</div>
-          <%= if @current_user.bio && @current_user.bio != "" do %>
-            <p class="text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap"><%= @current_user.bio %></p>
-          <% else %>
-            <p class="text-slate-400 dark:text-slate-500 italic">No bio yet. Click "Edit profile" to add one.</p>
+      <div class="overflow-hidden rounded-2xl border border-line bg-white shadow-sm dark:border-[#242424] dark:bg-[#141414]">
+        <div class="relative h-40 overflow-hidden bg-gradient-to-r from-brand via-[#8b5cf6] to-[#c084fc]">
+          <%= if @current_user.cover_url do %>
+            <img src={@current_user.cover_url} class="h-full w-full object-cover" />
           <% end %>
+          <div class="profile-cover-pattern absolute inset-0 opacity-30"></div>
+          <div class="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/25 to-transparent"></div>
         </div>
+        <div class="px-5 pb-6 sm:px-6">
+          <div class="-mt-14 flex flex-wrap items-end justify-between gap-4">
+            <div class="flex items-end gap-4">
+              <div class="relative">
+                <%= if @current_user.avatar_url do %>
+                  <img
+                    src={@current_user.avatar_url}
+                    class="h-24 w-24 rounded-full object-cover ring-4 ring-white dark:ring-[#141414]"
+                  />
+                <% else %>
+                  <div class={"flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br text-3xl font-bold text-white ring-4 ring-white dark:ring-[#141414] #{ViraChat.Accounts.User.avatar_gradient(@current_user)}"}>
+                    {String.first(@current_user.email) |> String.upcase()}
+                  </div>
+                <% end %>
+                <%= if @current_user.active_status do %>
+                  <span class="absolute bottom-1 right-1 h-4 w-4 rounded-full border-2 border-white bg-success dark:border-[#141414]">
+                  </span>
+                <% end %>
+              </div>
 
-        <!-- Stats -->
-        <div class="grid grid-cols-2 gap-4 mb-4">
-          <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 text-center">
-            <div class="text-3xl font-bold text-indigo-600 dark:text-indigo-400"><%= @stats.conversations %></div>
-            <div class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-1">Conversations</div>
-          </div>
-          <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 text-center">
-            <div class="text-3xl font-bold text-indigo-600 dark:text-indigo-400"><%= @stats.messages %></div>
-            <div class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-1">Messages sent</div>
+              <div class="pb-1">
+                <h1 class="text-[20px] font-bold text-ink dark:text-white">
+                  {ViraChat.Accounts.User.display_name(@current_user)}
+                </h1>
+                <p class="truncate text-[12.5px] text-body">
+                  @{ViraChat.Accounts.User.username(@current_user)} · {@current_user.email}
+                </p>
+                <p class="mt-0.5 text-[11.5px] text-muted">
+                  Joined {Calendar.strftime(@current_user.inserted_at, "%B %Y")}
+                </p>
+              </div>
+            </div>
+
+            <div class="mb-1 flex items-center gap-2">
+              <button
+                phx-click="toggle_qr"
+                class="flex items-center gap-2 rounded-xl border border-line bg-white px-4 py-2.5 text-[12.5px] font-semibold text-ink transition hover:border-brand/30 hover:text-brand dark:border-[#2a2a2a] dark:bg-[#161616] dark:text-white"
+              >
+                <.icon name="hero-qr-code" class="size-4" /> QR Code
+              </button>
+
+              <button
+                phx-click="toggle_edit"
+                class={[
+                  "flex items-center gap-2 rounded-xl px-4 py-2.5 text-[12.5px] font-semibold transition",
+                  @editing && "border border-line text-body hover:bg-surface-2 dark:border-[#2a2a2a] dark:hover:bg-[#1c1c1c]",
+                  !@editing && "bg-brand text-white shadow-sm shadow-brand/30 hover:bg-brand-600"
+                ]}
+              >
+                <.icon name={if @editing, do: "hero-x-mark", else: "hero-pencil-square"} class="size-4" />
+                {if @editing, do: "Cancel", else: "Edit profile"}
+              </button>
+            </div>
           </div>
         </div>
+      </div>
 
-        <!-- Danger zone -->
-        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
-          <div class="text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wider mb-3">Account</div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-slate-600 dark:text-slate-400">Log out of this device</span>
+      <%= if !@editing do %>
+        <div class="mt-5 grid gap-4">
+          <div class="rounded-2xl border border-line bg-white p-5 dark:border-[#242424] dark:bg-[#141414]">
+            <div class="mb-2 flex items-center gap-2">
+              <.icon name="hero-identification" class="size-4 text-brand" />
+              <h2 class="text-[13px] font-bold text-ink dark:text-white">Profile info</h2>
+            </div>
+
+            <dl class="divide-y divide-line dark:divide-[#242424]">
+              <div class="flex items-center justify-between gap-6 py-2.5">
+                <dt class="text-[11.5px] text-muted">Name</dt>
+                <dd class="truncate text-[12.5px] font-medium text-ink dark:text-white">
+                  {ViraChat.Accounts.User.display_name(@current_user)}
+                </dd>
+              </div>
+              <div class="flex items-center justify-between gap-6 py-2.5">
+                <dt class="text-[11.5px] text-muted">Username</dt>
+                <dd class="truncate text-[12.5px] font-medium text-ink dark:text-white">
+                  @{ViraChat.Accounts.User.username(@current_user)}
+                </dd>
+              </div>
+              <div class="flex items-center justify-between gap-6 py-2.5">
+                <dt class="text-[11.5px] text-muted">Email</dt>
+                <dd class="truncate text-[12.5px] font-medium text-ink dark:text-white">
+                  {@current_user.email}
+                </dd>
+              </div>
+              <div class="flex items-center justify-between gap-6 py-2.5">
+                <dt class="text-[11.5px] text-muted">Phone</dt>
+                <dd class="truncate text-[12.5px] font-medium text-ink dark:text-white">
+                  {ViraChat.Accounts.User.full_phone(@current_user) || "Not added"}
+                </dd>
+              </div>
+              <div class="flex items-center justify-between gap-6 py-2.5">
+                <dt class="text-[11.5px] text-muted">Country</dt>
+                <dd class="truncate text-[12.5px] font-medium text-ink dark:text-white">
+                  {@current_user.country || "Not added"}
+                </dd>
+              </div>
+              <div class="flex items-center justify-between gap-6 py-2.5">
+                <dt class="text-[11.5px] text-muted">Joined</dt>
+                <dd class="truncate text-[12.5px] font-medium text-ink dark:text-white">
+                  {Calendar.strftime(@current_user.inserted_at, "%d %b %Y")}
+                </dd>
+              </div>
+              <div class="flex items-center justify-between gap-6 py-2.5">
+                <dt class="text-[11.5px] text-muted">Last seen</dt>
+                <dd class="truncate text-[12.5px] font-medium text-ink dark:text-white">
+                  {if @current_user.last_seen_at,
+                    do: Calendar.strftime(@current_user.last_seen_at, "%d %b %Y, %H:%M"),
+                    else: "Online"}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="rounded-2xl border border-line bg-white p-5 dark:border-[#242424] dark:bg-[#141414]">
+            <div class="mb-3 flex items-center gap-2">
+              <.icon name="hero-user-circle" class="size-4 text-brand" />
+              <h2 class="text-[13px] font-bold text-ink dark:text-white">About</h2>
+            </div>
+            <%= if @current_user.bio && @current_user.bio != "" do %>
+              <p class="whitespace-pre-wrap text-[13px] leading-relaxed text-body">{@current_user.bio}</p>
+            <% else %>
+              <p class="text-[13px] italic text-muted">
+                No bio yet — add a short description so people know who they're talking to.
+              </p>
+            <% end %>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="rounded-2xl border border-line bg-white p-5 dark:border-[#242424] dark:bg-[#141414]">
+              <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] text-muted">
+                <.icon name="hero-chat-bubble-left-right" class="size-3.5" /> Conversations
+              </div>
+              <p class="mt-2 text-[26px] font-bold leading-none text-ink dark:text-white">
+                {@stats.conversations}
+              </p>
+            </div>
+            <div class="rounded-2xl border border-line bg-white p-5 dark:border-[#242424] dark:bg-[#141414]">
+              <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] text-muted">
+                <.icon name="hero-paper-airplane" class="size-3.5" /> Messages sent
+              </div>
+              <p class="mt-2 text-[26px] font-bold leading-none text-ink dark:text-white">
+                {@stats.messages}
+              </p>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-line bg-white p-5 dark:border-[#242424] dark:bg-[#141414]">
+            <div class="mb-1 flex items-center gap-2">
+              <.icon name="hero-shield-check" class="size-4 text-brand" />
+              <h2 class="text-[13px] font-bold text-ink dark:text-white">Account</h2>
+            </div>
+            <div class="divide-y divide-line dark:divide-[#242424]">
+              <div class="flex items-center justify-between py-3">
+                <div>
+                  <p class="text-[12.5px] font-medium text-ink dark:text-white">Email address</p>
+                  <p class="text-[12px] text-body">{@current_user.email}</p>
+                </div>
+                <.link navigate={~p"/users/settings"} class="text-[12px] font-semibold text-brand hover:underline">
+                  Change
+                </.link>
+              </div>
+              <div class="flex items-center justify-between py-3">
+                <div>
+                  <p class="text-[12.5px] font-medium text-ink dark:text-white">Password</p>
+                  <p class="text-[12px] text-body">Keep your account secure</p>
+                </div>
+                <.link navigate={~p"/users/settings"} class="text-[12px] font-semibold text-brand hover:underline">
+                  Update
+                </.link>
+              </div>
+              <div class="flex items-center justify-between py-3">
+                <div>
+                  <p class="text-[12.5px] font-medium text-ink dark:text-white">Notifications</p>
+                  <p class="text-[12px] text-body">Message and call alerts</p>
+                </div>
+                <.link href={~p"/chat"} class="text-[12px] font-semibold text-brand hover:underline">
+                  Manage
+                </.link>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-line bg-white p-5 dark:border-[#242424] dark:bg-[#141414]">
+            <div class="mb-1 flex items-center gap-2">
+              <.icon name="hero-signal" class="size-4 text-brand" />
+              <h2 class="text-[13px] font-bold text-ink dark:text-white">Status</h2>
+            </div>
+
+            <div class="divide-y divide-line dark:divide-[#242424]">
+              <div class="flex items-center justify-between gap-4 py-3">
+                <div>
+                  <p class="text-[12.5px] font-medium text-ink dark:text-white">Active status</p>
+                  <p class="text-[12px] text-body">Show when you're active</p>
+                </div>
+                <button
+                  phx-click="toggle_status"
+                  phx-value-field="active"
+                  aria-label="Toggle active status"
+                  class={[
+                    "relative h-6 w-11 flex-shrink-0 rounded-full transition",
+                    @current_user.active_status && "bg-brand",
+                    !@current_user.active_status && "bg-line dark:bg-[#2a2a2a]"
+                  ]}
+                >
+                  <span class={[
+                    "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition",
+                    @current_user.active_status && "left-[22px]",
+                    !@current_user.active_status && "left-0.5"
+                  ]}>
+                  </span>
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between gap-4 py-3">
+                <div>
+                  <p class="text-[12.5px] font-medium text-ink dark:text-white">Friends status</p>
+                  <p class="text-[12px] text-body">Show friends status in chat</p>
+                </div>
+                <button
+                  phx-click="toggle_status"
+                  phx-value-field="friends"
+                  aria-label="Toggle friends status"
+                  class={[
+                    "relative h-6 w-11 flex-shrink-0 rounded-full transition",
+                    @current_user.friends_status && "bg-brand",
+                    !@current_user.friends_status && "bg-line dark:bg-[#2a2a2a]"
+                  ]}
+                >
+                  <span class={[
+                    "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition",
+                    @current_user.friends_status && "left-[22px]",
+                    !@current_user.friends_status && "left-0.5"
+                  ]}>
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <% socials = ViraChat.Accounts.User.social_links(@current_user) %>
+          <div class="rounded-2xl border border-line bg-white p-5 dark:border-[#242424] dark:bg-[#141414]">
+            <div class="mb-3 flex items-center gap-2">
+              <.icon name="hero-globe-alt" class="size-4 text-brand" />
+              <h2 class="text-[13px] font-bold text-ink dark:text-white">Social media</h2>
+            </div>
+
+            <%= if socials == [] do %>
+              <p class="text-[12.5px] leading-relaxed text-body">
+                No social links yet — add your handles from
+                <button phx-click="toggle_edit" class="font-semibold text-brand hover:underline">
+                  Edit profile
+                </button>.
+              </p>
+            <% else %>
+              <div class="divide-y divide-line dark:divide-[#242424]">
+                <%= for {label, mark, handle, base} <- socials do %>
+                  <a
+                    href={base <> String.trim_leading(handle, "@")}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="flex items-center justify-between gap-4 py-3"
+                  >
+                    <div class="flex min-w-0 items-center gap-3">
+                      <span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-surface-2 text-[11px] font-bold text-body dark:bg-[#1c1c1c]">
+                        {mark}
+                      </span>
+                      <div class="min-w-0">
+                        <p class="text-[12.5px] font-medium text-ink dark:text-white">{label}</p>
+                        <p class="truncate text-[12px] text-body">@{String.trim_leading(handle, "@")}</p>
+                      </div>
+                    </div>
+                    <.icon name="hero-arrow-up-right" class="size-3.5 flex-shrink-0 text-muted" />
+                  </a>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="rounded-2xl border border-line bg-white p-5 dark:border-[#242424] dark:bg-[#141414]">
             <.link
               href={~p"/users/log-out"}
               method="delete"
-              class="text-sm text-red-600 dark:text-red-400 hover:underline font-medium"
+              class="flex items-center justify-between gap-4"
             >
-              Log out →
+              <div>
+                <p class="text-[12.5px] font-medium text-ink dark:text-white">Log out</p>
+                <p class="text-[12px] text-body">Sign out from this device</p>
+              </div>
+              <.icon name="hero-arrow-right-on-rectangle" class="size-4 text-danger" />
             </.link>
           </div>
         </div>
       <% else %>
-        <!-- Edit form -->
-        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 mb-4">
-          <.form for={@form} phx-change="validate" phx-submit="save_profile" class="space-y-6">
-            <!-- Avatar upload -->
-            <div>
-              <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Profile picture</label>
-              <div class="flex items-center gap-4">
-                <%= if @current_user.avatar_url do %>
-                  <img src={@current_user.avatar_url} class="w-16 h-16 rounded-full object-cover" />
-                <% else %>
-                  <div class="w-16 h-16 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xl font-bold">
-                    <%= String.first(@current_user.email) |> String.upcase() %>
-                  </div>
-                <% end %>
-                <label class="cursor-pointer text-sm text-indigo-600 dark:text-indigo-400 hover:underline">
-                  Upload new photo
-                  <.live_file_input upload={@uploads.avatar} class="hidden" />
-                </label>
-              </div>
-
-              <%= for entry <- @uploads.avatar.entries do %>
-                <div class="mt-3 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-3 py-2 rounded-lg">
-                  <span><%= entry.client_name %></span>
-                  <button type="button" phx-click="cancel-upload" phx-value-ref={entry.ref} phx-value-key="avatar" class="text-red-500 ml-auto">✕</button>
+        <.form
+          for={@form}
+          phx-change="validate"
+          phx-submit="save_profile"
+          class="mt-5 space-y-5 rounded-2xl border border-line bg-white p-5 dark:border-[#242424] dark:bg-[#141414]"
+        >
+          <div>
+            <p class="mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-muted">
+              Profile picture
+            </p>
+            <div class="flex items-center gap-4">
+              <%= if @current_user.avatar_url do %>
+                <img src={@current_user.avatar_url} class="h-16 w-16 rounded-full object-cover" />
+              <% else %>
+                <div class={"flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br text-xl font-bold text-white #{ViraChat.Accounts.User.avatar_gradient(@current_user)}"}>
+                  {String.first(@current_user.email) |> String.upcase()}
                 </div>
               <% end %>
+
+              <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-brand/40 px-4 py-2.5 text-[12.5px] font-semibold text-brand transition hover:bg-brand-soft">
+                <.icon name="hero-camera" class="size-4" /> Upload new photo
+                <.live_file_input upload={@uploads.avatar} class="hidden" />
+              </label>
             </div>
 
-            <!-- Display name -->
+            <%= for entry <- @uploads.avatar.entries do %>
+              <div class="mt-3 flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 text-[12px] text-body dark:bg-[#1c1c1c]">
+                <span class="truncate">{entry.client_name}</span>
+                <button
+                  type="button"
+                  phx-click="cancel-upload"
+                  phx-value-ref={entry.ref}
+                  phx-value-key="avatar"
+                  class="ml-auto text-danger"
+                  aria-label="Remove"
+                >
+                  <.icon name="hero-x-mark" class="size-3.5" />
+                </button>
+              </div>
+            <% end %>
+          </div>
+
+          <div>
+            <p class="mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-muted">
+              Cover photo
+            </p>
+            <div class="flex items-center gap-4">
+              <div class="relative h-16 w-28 overflow-hidden rounded-xl bg-gradient-to-r from-brand via-[#8b5cf6] to-[#c084fc]">
+                <%= if @current_user.cover_url do %>
+                  <img src={@current_user.cover_url} class="h-full w-full object-cover" />
+                <% end %>
+              </div>
+
+              <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-brand/40 px-4 py-2.5 text-[12.5px] font-semibold text-brand transition hover:bg-brand-soft">
+                <.icon name="hero-photo" class="size-4" /> Upload cover
+                <.live_file_input upload={@uploads.cover} class="hidden" />
+              </label>
+            </div>
+
+            <%= for entry <- @uploads.cover.entries do %>
+              <div class="mt-3 flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 text-[12px] text-body dark:bg-[#1c1c1c]">
+                <span class="truncate">{entry.client_name}</span>
+                <button
+                  type="button"
+                  phx-click="cancel-upload"
+                  phx-value-ref={entry.ref}
+                  phx-value-key="cover"
+                  class="ml-auto text-danger"
+                  aria-label="Remove"
+                >
+                  <.icon name="hero-x-mark" class="size-3.5" />
+                </button>
+              </div>
+            <% end %>
+          </div>
+
+          <div>
+            <label class="mb-1.5 block text-[12px] font-semibold text-ink dark:text-white">
+              Display name
+            </label>
+            <input
+              type="text"
+              name="display_name"
+              value={@form[:display_name].value}
+              placeholder="e.g. Vini"
+              maxlength="50"
+              class="w-full rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-[13px] text-ink outline-none transition placeholder:text-muted focus:border-brand/40 focus:bg-white focus:ring-2 focus:ring-brand/15 dark:border-[#2a2a2a] dark:bg-[#161616] dark:text-white dark:focus:bg-[#111]"
+            />
+            <p class="mt-1 text-[11px] text-muted">If empty, your email is shown instead.</p>
+          </div>
+
+          <div>
+            <label class="mb-1.5 block text-[12px] font-semibold text-ink dark:text-white">
+              Bio
+            </label>
+            <textarea
+              name="bio"
+              rows="3"
+              maxlength="200"
+              placeholder="A short description about you"
+              class="w-full rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-[13px] text-ink outline-none transition placeholder:text-muted focus:border-brand/40 focus:bg-white focus:ring-2 focus:ring-brand/15 dark:border-[#2a2a2a] dark:bg-[#161616] dark:text-white dark:focus:bg-[#111]"
+            ><%= @form[:bio].value %></textarea>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
             <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Display name</label>
-              <input
-                type="text"
-                name="display_name"
-                value={@form[:display_name].value}
-                placeholder="e.g. Vini"
-                maxlength="50"
-                class="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">If empty, your email is shown instead.</p>
+              <label class="mb-1.5 block text-[12px] font-semibold text-ink dark:text-white">
+                Phone number
+              </label>
+              <div class="flex gap-2">
+                <select
+                  name="phone_country_code"
+                  aria-label="Country code"
+                  class="w-[112px] flex-shrink-0 rounded-xl border border-line bg-surface-2 px-2.5 py-2.5 text-[12.5px] text-ink outline-none transition focus:border-brand/40 focus:bg-white focus:ring-2 focus:ring-brand/15 dark:border-[#2a2a2a] dark:bg-[#161616] dark:text-white"
+                >
+                  <option value="">Code</option>
+                  <%= for {code, label} <- @dial_codes do %>
+                    <option value={code} selected={@current_user.phone_country_code == code}>
+                      {label}
+                    </option>
+                  <% end %>
+                  <%= if @current_user.phone_country_code &&
+                           @current_user.phone_country_code not in Enum.map(@dial_codes, &elem(&1, 0)) do %>
+                    <option value={@current_user.phone_country_code} selected>
+                      {@current_user.phone_country_code}
+                    </option>
+                  <% end %>
+                </select>
+
+                <input
+                  type="tel"
+                  name="phone"
+                  value={@current_user.phone}
+                  placeholder="98765 43210"
+                  inputmode="tel"
+                  maxlength="20"
+                  class="min-w-0 flex-1 rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-[13px] text-ink outline-none transition placeholder:text-muted focus:border-brand/40 focus:bg-white focus:ring-2 focus:ring-brand/15 dark:border-[#2a2a2a] dark:bg-[#161616] dark:text-white dark:focus:bg-[#111]"
+                />
+              </div>
+              <p class="mt-1 text-[11px] text-muted">
+                Digits only — the dial code is stored with it.
+              </p>
             </div>
 
-            <!-- Bio -->
             <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Bio</label>
-              <textarea
-                name="bio"
-                rows="3"
-                maxlength="200"
-                placeholder="A short description about you"
-                class="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              ><%= @form[:bio].value %></textarea>
-            </div>
-
-            <!-- Email (read-only) -->
-            <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Email</label>
-              <input
-                type="text"
-                value={@current_user.email}
-                disabled
-                class="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-500"
-              />
-            </div>
-
-            <div class="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                phx-click="toggle_edit"
-                class="px-5 py-2.5 text-sm text-slate-600 dark:text-slate-400 hover:underline"
+              <label class="mb-1.5 block text-[12px] font-semibold text-ink dark:text-white">
+                Country
+              </label>
+              <select
+                name="country"
+                class="w-full rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-[13px] text-ink outline-none transition focus:border-brand/40 focus:bg-white focus:ring-2 focus:ring-brand/15 dark:border-[#2a2a2a] dark:bg-[#161616] dark:text-white"
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition"
-              >
-                Save profile
-              </button>
+                <option value="">Select country</option>
+                <%= for country <- @countries do %>
+                  <option value={country} selected={@current_user.country == country}>
+                    {country}
+                  </option>
+                <% end %>
+                <%= if @current_user.country && @current_user.country not in @countries do %>
+                  <option value={@current_user.country} selected>{@current_user.country}</option>
+                <% end %>
+              </select>
             </div>
-          </.form>
-        </div>
+          </div>
+
+          <div>
+            <label class="mb-1.5 block text-[12px] font-semibold text-ink dark:text-white">
+              Email
+            </label>
+            <input
+              type="text"
+              value={@current_user.email}
+              disabled
+              class="w-full cursor-not-allowed rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-[13px] text-muted dark:border-[#2a2a2a] dark:bg-[#161616]"
+            />
+            <p class="mt-1 text-[11px] text-muted">
+              Change your email from <.link navigate={~p"/users/settings"} class="font-semibold text-brand hover:underline">settings</.link>.
+            </p>
+          </div>
+
+          <div>
+            <p class="mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-muted">
+              Social media
+            </p>
+            <div class="grid gap-4 sm:grid-cols-3">
+              <div>
+                <label class="mb-1.5 block text-[12px] font-semibold text-ink dark:text-white">
+                  Facebook
+                </label>
+                <input
+                  type="text"
+                  name="facebook"
+                  value={@current_user.facebook}
+                  placeholder="username"
+                  maxlength="60"
+                  class="w-full rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-[13px] text-ink outline-none transition placeholder:text-muted focus:border-brand/40 focus:bg-white focus:ring-2 focus:ring-brand/15 dark:border-[#2a2a2a] dark:bg-[#161616] dark:text-white dark:focus:bg-[#111]"
+                />
+              </div>
+              <div>
+                <label class="mb-1.5 block text-[12px] font-semibold text-ink dark:text-white">
+                  Instagram
+                </label>
+                <input
+                  type="text"
+                  name="instagram"
+                  value={@current_user.instagram}
+                  placeholder="username"
+                  maxlength="60"
+                  class="w-full rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-[13px] text-ink outline-none transition placeholder:text-muted focus:border-brand/40 focus:bg-white focus:ring-2 focus:ring-brand/15 dark:border-[#2a2a2a] dark:bg-[#161616] dark:text-white dark:focus:bg-[#111]"
+                />
+              </div>
+              <div>
+                <label class="mb-1.5 block text-[12px] font-semibold text-ink dark:text-white">
+                  LinkedIn
+                </label>
+                <input
+                  type="text"
+                  name="linkedin"
+                  value={@current_user.linkedin}
+                  placeholder="username"
+                  maxlength="60"
+                  class="w-full rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-[13px] text-ink outline-none transition placeholder:text-muted focus:border-brand/40 focus:bg-white focus:ring-2 focus:ring-brand/15 dark:border-[#2a2a2a] dark:bg-[#161616] dark:text-white dark:focus:bg-[#111]"
+                />
+              </div>
+            </div>
+            <p class="mt-1 text-[11px] text-muted">Handle only — the profile links are built for you.</p>
+          </div>
+
+          <div class="flex justify-end gap-2 border-t border-line pt-4 dark:border-[#242424]">
+            <button
+              type="button"
+              phx-click="toggle_edit"
+              class="rounded-xl px-4 py-2.5 text-[12.5px] font-semibold text-body transition hover:text-ink dark:hover:text-white"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-[12.5px] font-semibold text-white shadow-sm shadow-brand/30 transition hover:bg-brand-600"
+            >
+              <.icon name="hero-check" class="size-4" /> Save profile
+            </button>
+          </div>
+        </.form>
       <% end %>
     </div>
+
+    <%= if @show_qr do %>
+      <% qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=12&data=" <> URI.encode_www_form(@profile_url) %>
+      <div class="fixed inset-0 z-40 bg-ink/40 backdrop-blur-sm" phx-click="close_qr"></div>
+
+      <div class="fixed left-1/2 top-1/2 z-50 w-[340px] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-line bg-white p-5 shadow-pop dark:border-[#2a2a2a] dark:bg-[#141414]">
+        <div class="mb-4 flex items-center justify-between">
+          <h2 class="text-[14px] font-bold text-ink dark:text-white">QR Code</h2>
+          <button
+            phx-click="close_qr"
+            aria-label="Close"
+            class="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-surface-2 dark:hover:bg-[#1c1c1c]"
+          >
+            <.icon name="hero-x-mark" class="size-4" />
+          </button>
+        </div>
+
+        <div class="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-surface-2 p-1 dark:bg-[#1c1c1c]">
+          <button
+            phx-click="qr_tab"
+            phx-value-tab="mine"
+            class={[
+              "flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[11.5px] font-semibold transition",
+              @qr_tab == "mine" && "bg-white text-brand shadow-sm dark:bg-[#2a2a2a] dark:text-white",
+              @qr_tab != "mine" && "text-body hover:text-ink dark:hover:text-white"
+            ]}
+          >
+            <.icon name="hero-qr-code" class="size-3.5" /> My Code
+          </button>
+          <button
+            phx-click="qr_tab"
+            phx-value-tab="scan"
+            class={[
+              "flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[11.5px] font-semibold transition",
+              @qr_tab == "scan" && "bg-white text-brand shadow-sm dark:bg-[#2a2a2a] dark:text-white",
+              @qr_tab != "scan" && "text-body hover:text-ink dark:hover:text-white"
+            ]}
+          >
+            <.icon name="hero-camera" class="size-3.5" /> Scan Code
+          </button>
+        </div>
+
+        <%= if @qr_tab == "mine" do %>
+          <div class="rounded-2xl bg-white p-3 ring-1 ring-line dark:ring-[#2a2a2a]">
+            <img src={qr_url} alt="Profile QR code" class="mx-auto h-[220px] w-[220px]" />
+          </div>
+
+          <div class="mt-4 text-center">
+            <p class="text-[13px] font-bold text-ink dark:text-white">
+              {ViraChat.Accounts.User.display_name(@current_user)}
+            </p>
+            <p class="text-[11.5px] text-body">
+              @{ViraChat.Accounts.User.username(@current_user)}
+            </p>
+            <p class="mt-1 text-[10.5px] text-muted">ViraChat ID: VC-{@current_user.id}</p>
+          </div>
+
+          <p class="mt-3 text-center text-[11px] leading-relaxed text-muted">
+            Your code is private. Only people you share it with can add you.
+          </p>
+
+          <div class="mt-4 flex gap-2">
+            <a
+              href={qr_url}
+              download="virachat-qr.png"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-line px-3 py-2 text-[12px] font-semibold text-ink transition hover:border-brand/30 hover:text-brand dark:border-[#2a2a2a] dark:text-white"
+            >
+              <.icon name="hero-arrow-down-tray" class="size-3.5" /> Download
+            </a>
+            <button
+              phx-click="close_qr"
+              class="flex-1 rounded-xl bg-brand px-3 py-2 text-[12px] font-semibold text-white transition hover:bg-brand-600"
+            >
+              Done
+            </button>
+          </div>
+        <% else %>
+          <div id="qr-scanner" phx-hook="QrScanner" class="flex flex-col items-center">
+            <div class="relative aspect-square w-full max-w-[240px] overflow-hidden rounded-2xl bg-ink">
+              <video data-scan-video class="h-full w-full object-cover" autoplay muted playsinline>
+              </video>
+              <div class="pointer-events-none absolute inset-6 rounded-xl border-2 border-white/70">
+              </div>
+              <div class="pointer-events-none absolute inset-x-6 top-1/2 h-0.5 bg-brand"></div>
+            </div>
+
+            <p data-scan-status class="mt-3 text-center text-[11.5px] leading-relaxed text-body">
+              Point your camera at a ViraChat QR code.
+            </p>
+            <p data-scan-result class="mt-1 hidden break-all text-center text-[11px] font-semibold text-brand">
+            </p>
+
+            <button
+              phx-click="close_qr"
+              class="mt-4 w-full rounded-xl bg-brand px-3 py-2 text-[12px] font-semibold text-white transition hover:bg-brand-600"
+            >
+              Done
+            </button>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
   </div>
-</div>
+</Layouts.app>

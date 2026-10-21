@@ -2,7 +2,7 @@ defmodule ViraChatWeb.ChatComponents do
   @moduledoc """
   UI components specific to the chat interface.
   """
-  use Phoenix.Component
+  use ViraChatWeb, :html
 
   @doc """
   Renders the emoji picker dropdown.
@@ -10,13 +10,31 @@ defmodule ViraChatWeb.ChatComponents do
   """
   def emoji_picker(assigns) do
     ~H"""
-    <div id="emoji-picker-wrapper" phx-hook="EmojiPicker" phx-update="ignore" class="relative">
-      <!-- Trigger Button -->
-      <button type="button" data-emoji-toggle class="w-10 h-10 flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xl">😊</button>
+    <div
+      id="emoji-picker-wrapper"
+      phx-hook="EmojiPicker"
+      phx-update="ignore"
+      class="relative flex items-center"
+    >
+      <button
+        type="button"
+        data-emoji-toggle
+        aria-label="Emoji picker"
+        title="Emoji"
+        class="flex h-11 w-11 items-center justify-center rounded-full text-body transition hover:bg-surface-2 hover:text-brand dark:hover:bg-[#161616]"
+      >
+        <.icon name="hero-face-smile" class="size-5" />
+      </button>
 
-      <!-- Emoji Panel (Uses Web Component) -->
-      <div data-emoji-panel class="hidden absolute bottom-14 left-0 z-20 shadow-2xl rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-        <emoji-picker class="light dark:dark" style="height: 350px; width: 320px; --background: transparent; --border-color: transparent;"></emoji-picker>
+      <div
+        data-emoji-panel
+        class="absolute bottom-14 left-0 z-30 hidden overflow-hidden rounded-2xl border border-line bg-white shadow-pop dark:border-[#2a2a2a] dark:bg-[#141414]"
+      >
+        <emoji-picker
+          class="light dark:dark"
+          style="height: 340px; width: 300px; --background: transparent; --border-color: transparent;"
+        >
+        </emoji-picker>
       </div>
     </div>
     """

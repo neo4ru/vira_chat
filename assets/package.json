@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "country-flag-emoji-polyfill": "^0.1.10",
     "emoji-picker-element": "^1.29.1"
   }
 }

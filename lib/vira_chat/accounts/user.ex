@@ -11,6 +11,15 @@ defmodule ViraChat.Accounts.User do
     field :display_name, :string
     field :bio, :string
     field :avatar_url, :string
+    field :cover_url, :string
+    field :phone_country_code, :string
+    field :phone, :string
+    field :country, :string
+    field :facebook, :string
+    field :instagram, :string
+    field :linkedin, :string
+    field :active_status, :boolean, default: true
+    field :friends_status, :boolean, default: true
     field :last_seen_at, :utc_datetime
     field :role, :string, default: "user"
     field :banned_at, :utc_datetime
@@ -119,11 +128,63 @@ defmodule ViraChat.Accounts.User do
   end
 
   def profile_changeset(user, attrs) do
-  user
-  |> cast(attrs, [:display_name, :bio, :avatar_url])
-  |> validate_length(:display_name, max: 50)
-  |> validate_length(:bio, max: 200)
+    user
+    |> cast(attrs, [
+      :display_name,
+      :bio,
+      :avatar_url,
+      :cover_url,
+      :phone_country_code,
+      :phone,
+      :country,
+      :facebook,
+      :instagram,
+      :linkedin,
+      :active_status,
+      :friends_status
+    ])
+    |> validate_length(:display_name, max: 50)
+    |> validate_length(:bio, max: 200)
+    |> validate_length(:phone_country_code, max: 8)
+    |> validate_length(:phone, max: 20)
+    |> validate_format(:phone, ~r/^[0-9\s\-().]{6,20}$/,
+      message: "must be a valid phone number"
+    )
+    |> validate_length(:country, max: 60)
+    |> validate_length(:facebook, max: 60)
+    |> validate_length(:instagram, max: 60)
+    |> validate_length(:linkedin, max: 60)
   end
+
+  @doc """
+  The user's social handles, or an empty list when none are set.
+  """
+  def social_links(%__MODULE__{} = user) do
+    [
+      {"Facebook", "f", user.facebook, "https://facebook.com/"},
+      {"Instagram", "ig", user.instagram, "https://instagram.com/"},
+      {"LinkedIn", "in", user.linkedin, "https://linkedin.com/in/"}
+    ]
+    |> Enum.reject(fn {_label, _mark, handle, _base} -> handle in [nil, ""] end)
+  end
+
+  @doc """
+  A username derived from the email address.
+  """
+  def username(%__MODULE__{email: email}) do
+    email |> String.split("@") |> List.first()
+  end
+
+  @doc """
+  The user's phone number with its dial code, or nil when not set.
+  """
+  def full_phone(%__MODULE__{phone: nil}), do: nil
+  def full_phone(%__MODULE__{phone: ""}), do: nil
+
+  def full_phone(%__MODULE__{phone: phone, phone_country_code: code}) do
+    [code, phone] |> Enum.reject(&(&1 in [nil, ""])) |> Enum.join(" ")
+  end
+
   @doc """
   Verifies the password.
 
@@ -141,46 +202,44 @@ defmodule ViraChat.Accounts.User do
   end
 
   # Returns the user's display name if set, otherwise their email.
-def display_name(%__MODULE__{display_name: name}) when is_binary(name) and name != "" do
-  name
-end
+  def display_name(%__MODULE__{display_name: name}) when is_binary(name) and name != "" do
+    name
+  end
 
-def display_name(%__MODULE__{email: email}), do: email
+  def display_name(%__MODULE__{email: email}), do: email
 
-def admin?(%__MODULE__{role: role}) when role in ["admin", "superuser"], do: true
-def admin?(%__MODULE__{}), do: false
+  def admin?(%__MODULE__{role: role}) when role in ["admin", "superuser"], do: true
+  def admin?(%__MODULE__{}), do: false
 
-def superuser?(%__MODULE__{role: "superuser"}), do: true
-def superuser?(%__MODULE__{}), do: false
+  def superuser?(%__MODULE__{role: "superuser"}), do: true
+  def superuser?(%__MODULE__{}), do: false
 
-def banned?(%__MODULE__{banned_at: nil}), do: false
-def banned?(%__MODULE__{}), do: true
+  def banned?(%__MODULE__{banned_at: nil}), do: false
+  def banned?(%__MODULE__{}), do: true
 
-def role_label(%__MODULE__{role: "superuser"}), do: "Superuser"
-def role_label(%__MODULE__{role: "admin"}), do: "Admin"
-def role_label(%__MODULE__{}), do: "User"
+  def role_label(%__MODULE__{role: "superuser"}), do: "Superuser"
+  def role_label(%__MODULE__{role: "admin"}), do: "Admin"
+  def role_label(%__MODULE__{}), do: "User"
 
-# Returns a Tailwind gradient string based on the user's ID.
-# Deterministic: the same user always gets the same color.
-@avatar_gradients [
-  "from-indigo-500 to-blue-600",
-  "from-violet-500 to-purple-600",
-  "from-pink-500 to-rose-600",
-  "from-emerald-500 to-teal-600",
-  "from-amber-500 to-orange-600",
-  "from-cyan-500 to-blue-600",
-  "from-fuchsia-500 to-pink-600",
-  "from-lime-500 to-emerald-600",
-  "from-rose-500 to-red-600",
-  "from-sky-500 to-indigo-600"
-]
+  # Returns a Tailwind gradient string based on the user's ID.
+  # Deterministic: the same user always gets the same color.
+  @avatar_gradients [
+    "from-indigo-500 to-blue-600",
+    "from-violet-500 to-purple-600",
+    "from-pink-500 to-rose-600",
+    "from-emerald-500 to-teal-600",
+    "from-amber-500 to-orange-600",
+    "from-cyan-500 to-blue-600",
+    "from-fuchsia-500 to-pink-600",
+    "from-lime-500 to-emerald-600",
+    "from-rose-500 to-red-600",
+    "from-sky-500 to-indigo-600"
+  ]
 
-def avatar_gradient(%__MODULE__{id: id}) when is_integer(id) do
-  idx = rem(id, length(@avatar_gradients))
-  Enum.at(@avatar_gradients, idx)
-end
+  def avatar_gradient(%__MODULE__{id: id}) when is_integer(id) do
+    idx = rem(id, length(@avatar_gradients))
+    Enum.at(@avatar_gradients, idx)
+  end
 
-def avatar_gradient(_), do: "from-indigo-500 to-blue-600"
-
-
+  def avatar_gradient(_), do: "from-indigo-500 to-blue-600"
 end

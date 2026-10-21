@@ -1,23 +1,62 @@
-<<<<<<< HEAD
 # ViraChat
 
-To start your Phoenix server:
+A real-time chat application built with Phoenix LiveView.
 
-* Run `mix setup` to install and setup dependencies
-* Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+## Features
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+- Private and group conversations, with group admin roles
+- Real-time messages, typing indicators, presence and last seen
+- Read receipts (sent / delivered / seen), unread counts and title badge
+- Replies, edits, soft deletes, forwarding, stars, reactions and link previews
+- Image uploads, voice notes, emoji picker and `@mention` autocomplete
+- Conversation pin / mute / archive / clear, blocking and message reports
+- Magic-link and password authentication, password reset, account settings
+- Admin area: dashboard, users, conversations, reports queue and audit log
+- Audio/video calls between two users over WebRTC
 
-Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+## Requirements
+
+- Elixir 1.15+ and Erlang/OTP 26+
+- PostgreSQL
+- Node.js (only for the asset dependencies)
+
+## Setup
+
+```sh
+mix setup
+mix phx.server
+```
+
+Then visit [`localhost:4000`](http://localhost:4000).
+
+To promote an account to superuser (needed for the first `/admin` login):
+
+```sh
+mix virachat.make_superuser you@example.com
+```
+
+## Web push notifications
+
+Development VAPID keys live in `config/dev.exs`. To use your own pair (or in
+production), generate one with:
+
+```sh
+mix generate.vapid.keys
+```
+
+and provide `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (and optionally
+`VAPID_SUBJECT`) as environment variables. Without a key pair, push
+notifications are skipped silently.
+
+## Development
+
+```sh
+mix precommit   # compile with warnings as errors, format, and run the test suite
+```
 
 ## Learn more
 
-* Official website: https://www.phoenixframework.org/
-* Guides: https://hexdocs.pm/phoenix/overview.html
-* Docs: https://hexdocs.pm/phoenix
-* Forum: https://elixirforum.com/c/phoenix-forum
-* Source: https://github.com/phoenixframework/phoenix
-=======
-# vira_chat
-vira chat is massaging 
->>>>>>> ecc8790f4ba7b5e6373d810c752e8aa6d78779ba
+- Official website: https://www.phoenixframework.org/
+- Guides: https://hexdocs.pm/phoenix/overview.html
+- Docs: https://hexdocs.pm/phoenix
+- Forum: https://elixirforum.com/c/phoenix-forum

@@ -168,9 +168,9 @@ defmodule ViraChat.Accounts do
   end
 
   def update_user_profile(user, attrs) do
-  user
-  |> User.profile_changeset(attrs)
-  |> Repo.update()
+    user
+    |> User.profile_changeset(attrs)
+    |> Repo.update()
   end
 
   ## Session
@@ -280,6 +280,43 @@ defmodule ViraChat.Accounts do
   end
 
   @doc """
+  Delivers the reset password instructions to the given user.
+  """
+  def deliver_user_reset_password_instructions(%User{} = user, reset_password_url_fun)
+      when is_function(reset_password_url_fun, 1) do
+    {encoded_token, user_token} = UserToken.build_email_token(user, "reset_password")
+    Repo.insert!(user_token)
+    UserNotifier.deliver_reset_password_instructions(user, reset_password_url_fun.(encoded_token))
+  end
+
+  @doc """
+  Gets the user with the given reset password token.
+
+  Returns `nil` if the token is invalid or expired.
+  """
+  def get_user_by_reset_password_token(token) do
+    with {:ok, query} <- UserToken.verify_reset_password_token_query(token) do
+      Repo.one(query)
+    else
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Resets the user password and invalidates all of their sessions.
+
+  Returns `{:ok, user}` or `{:error, changeset}`.
+  """
+  def reset_user_password(user, attrs) do
+    Repo.transact(fn ->
+      with {:ok, user} <- Repo.update(User.password_changeset(user, attrs)) do
+        Repo.delete_all(UserToken.by_user_and_contexts_query(user, ["session", "reset_password"]))
+        {:ok, user}
+      end
+    end)
+  end
+
+  @doc """
   Deletes the signed token with the given context.
   """
   def delete_user_session_token(token) do
@@ -302,22 +339,20 @@ defmodule ViraChat.Accounts do
   end
 
   @doc """
-Returns conversation/message stats for the given user.
-"""
-def user_stats(user_id) do
-  import Ecto.Query
-  alias ViraChat.Chat.{Conversation, Message, Participant}
+  Returns conversation/message stats for the given user.
+  """
+  def user_stats(user_id) do
+    import Ecto.Query
+    alias ViraChat.Chat.{Message, Participant}
 
-  conversations_count =
-    from(p in Participant, where: p.user_id == ^user_id, select: count(p.id))
-    |> ViraChat.Repo.one()
+    conversations_count =
+      from(p in Participant, where: p.user_id == ^user_id, select: count(p.id))
+      |> ViraChat.Repo.one()
 
-  messages_count =
-    from(m in Message, where: m.user_id == ^user_id, select: count(m.id))
-    |> ViraChat.Repo.one()
+    messages_count =
+      from(m in Message, where: m.user_id == ^user_id, select: count(m.id))
+      |> ViraChat.Repo.one()
 
-  %{conversations: conversations_count, messages: messages_count}
-end
-
-
+    %{conversations: conversations_count, messages: messages_count}
+  end
 end

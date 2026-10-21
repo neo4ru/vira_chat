@@ -11,7 +11,8 @@ defmodule ViraChat.Chat do
 
   def list_conversations_for_user(user_id) do
     from(c in Conversation,
-      join: p in Participant, on: p.conversation_id == c.id,
+      join: p in Participant,
+      on: p.conversation_id == c.id,
       where: p.user_id == ^user_id,
       order_by: [desc_nulls_last: p.pinned_at, desc: c.updated_at],
       preload: [:users],
@@ -19,8 +20,30 @@ defmodule ViraChat.Chat do
     )
     |> Repo.all()
     |> Enum.map(fn {conv, participant} ->
-      Map.put(conv, :participant, participant)
+      conv
+      |> Map.put(:participant, participant)
+      |> Map.put(:last_message, last_message_for(conv.id))
     end)
+  end
+
+  @doc """
+  The most recent visible message of a conversation, or nil.
+
+  Used to render the preview and timestamp in the conversation list.
+  """
+  def last_message_for(conversation_id) do
+    from(m in Message,
+      where: m.conversation_id == ^conversation_id and is_nil(m.deleted_at),
+      order_by: [desc: m.inserted_at],
+      limit: 1,
+      select: %{
+        content: m.content,
+        media_url: m.media_url,
+        inserted_at: m.inserted_at,
+        user_id: m.user_id
+      }
+    )
+    |> Repo.one()
   end
 
   def get_conversation!(id), do: Repo.get!(Conversation, id)
@@ -32,8 +55,10 @@ defmodule ViraChat.Chat do
   def create_private_conversation(user1_id, user2_id) do
     existing =
       from(c in Conversation,
-        join: p1 in Participant, on: p1.conversation_id == c.id,
-        join: p2 in Participant, on: p2.conversation_id == c.id,
+        join: p1 in Participant,
+        on: p1.conversation_id == c.id,
+        join: p2 in Participant,
+        on: p2.conversation_id == c.id,
         where: c.type == "private",
         where: p1.user_id == ^user1_id and p2.user_id == ^user2_id,
         limit: 1
@@ -99,7 +124,8 @@ defmodule ViraChat.Chat do
 
   def get_users_in_conversation(conversation_id) do
     from(u in User,
-      join: p in Participant, on: p.user_id == u.id,
+      join: p in Participant,
+      on: p.user_id == u.id,
       where: p.conversation_id == ^conversation_id,
       order_by: [asc: u.email]
     )
@@ -131,7 +157,8 @@ defmodule ViraChat.Chat do
       from(p in Participant,
         where: p.conversation_id == ^conversation_id and p.user_id == ^user_id,
         select: p.cleared_at
-      ) |> Repo.one()
+      )
+      |> Repo.one()
 
     query =
       from(m in Message,
@@ -140,6 +167,13 @@ defmodule ViraChat.Chat do
         limit: ^limit,
         offset: ^offset,
         preload: [:user, :forwarded_from, reply_to: :user, reactions: :user]
+      )
+
+    now = NaiveDateTime.utc_now()
+
+    query =
+      from(m in query,
+        where: is_nil(m.expires_at) or m.expires_at > ^now
       )
 
     # Filter out messages older than cleared_at
@@ -170,13 +204,25 @@ defmodule ViraChat.Chat do
 
   def create_message_with_media(conversation_id, user_id, content, media_url, reply_to_id \\ nil) do
     Repo.transaction(fn ->
+      ttl =
+        from(c in Conversation, where: c.id == ^conversation_id, select: c.disappearing_seconds)
+        |> Repo.one() || 0
+
+      expires_at =
+        if ttl > 0 do
+          NaiveDateTime.utc_now()
+          |> NaiveDateTime.add(ttl, :second)
+          |> NaiveDateTime.truncate(:second)
+        end
+
       case %Message{}
            |> Message.changeset(%{
              conversation_id: conversation_id,
              user_id: user_id,
              content: content,
              media_url: media_url,
-             reply_to_id: reply_to_id
+             reply_to_id: reply_to_id,
+             expires_at: expires_at
            })
            |> Repo.insert() do
         {:ok, message} ->
@@ -214,7 +260,8 @@ defmodule ViraChat.Chat do
         |> Repo.update()
         |> case do
           {:ok, updated} ->
-            {:ok, Repo.preload(updated, [:user, :forwarded_from, reply_to: :user, reactions: :user])}
+            {:ok,
+             Repo.preload(updated, [:user, :forwarded_from, reply_to: :user, reactions: :user])}
 
           error ->
             error
@@ -240,7 +287,8 @@ defmodule ViraChat.Chat do
         |> Repo.update()
         |> case do
           {:ok, updated} ->
-            {:ok, Repo.preload(updated, [:user, :forwarded_from, reply_to: :user, reactions: :user])}
+            {:ok,
+             Repo.preload(updated, [:user, :forwarded_from, reply_to: :user, reactions: :user])}
 
           error ->
             error
@@ -262,8 +310,10 @@ defmodule ViraChat.Chat do
       pattern = "%#{query}%"
 
       from(m in Message,
-        join: c in Conversation, on: c.id == m.conversation_id,
-        join: p in Participant, on: p.conversation_id == c.id,
+        join: c in Conversation,
+        on: c.id == m.conversation_id,
+        join: p in Participant,
+        on: p.conversation_id == c.id,
         where: p.user_id == ^user_id,
         where: is_nil(m.deleted_at),
         where: ilike(m.content, ^pattern),
@@ -298,7 +348,8 @@ defmodule ViraChat.Chat do
 
   def unread_counts_for_user(user_id) do
     from(m in Message,
-      join: p in Participant, on: p.conversation_id == m.conversation_id,
+      join: p in Participant,
+      on: p.conversation_id == m.conversation_id,
       where: p.user_id == ^user_id,
       where: m.user_id != ^user_id,
       where: is_nil(p.last_read_at) or m.inserted_at > p.last_read_at,
@@ -440,6 +491,36 @@ defmodule ViraChat.Chat do
     end
   end
 
+  @doc """
+  Sets the disappearing-message TTL for a conversation (seconds, 0 = off).
+  """
+  def set_disappearing(conversation_id, user_id, seconds)
+      when is_integer(seconds) and seconds >= 0 do
+    if participant?(conversation_id, user_id) do
+      from(c in Conversation, where: c.id == ^conversation_id)
+      |> Repo.update_all(
+        set: [
+          disappearing_seconds: seconds,
+          updated_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        ]
+      )
+
+      {:ok, get_conversation_with_participants!(conversation_id)}
+    else
+      {:error, :not_a_participant}
+    end
+  end
+
+  @doc """
+  Deletes messages whose disappearing timer has elapsed.
+  """
+  def purge_expired_messages do
+    now = NaiveDateTime.utc_now()
+
+    from(m in Message, where: not is_nil(m.expires_at) and m.expires_at <= ^now)
+    |> Repo.delete_all()
+  end
+
   def muted?(conversation_id, user_id) do
     case get_participant(conversation_id, user_id) do
       %{muted_at: muted} when not is_nil(muted) -> true
@@ -498,6 +579,22 @@ defmodule ViraChat.Chat do
     |> Repo.exists?()
   end
 
+  @doc """
+  Returns true when `user_id` may send messages in the given conversation.
+
+  Private conversations are blocked in both directions as soon as either
+  participant has blocked the other.
+  """
+  def can_message?(%Conversation{type: "private", users: users}, user_id)
+      when is_list(users) do
+    case Enum.find(users, &(&1.id != user_id)) do
+      nil -> true
+      other -> not blocked_between?(user_id, other.id)
+    end
+  end
+
+  def can_message?(%Conversation{}, _user_id), do: true
+
   def block_user(blocker_id, blocked_id) do
     %Block{}
     |> Block.changeset(%{blocker_id: blocker_id, blocked_id: blocked_id})
@@ -549,7 +646,8 @@ defmodule ViraChat.Chat do
 
   def list_starred_messages(user_id) do
     from(m in Message,
-      join: s in MessageStar, on: s.message_id == m.id,
+      join: s in MessageStar,
+      on: s.message_id == m.id,
       where: s.user_id == ^user_id,
       where: is_nil(m.deleted_at),
       order_by: [desc: s.inserted_at],
@@ -642,8 +740,12 @@ defmodule ViraChat.Chat do
     conversation = get_conversation!(conversation_id)
 
     cond do
-      conversation.type != "group" -> {:error, :not_a_group}
-      not admin?(conversation_id, actor_id) -> {:error, :unauthorized}
+      conversation.type != "group" ->
+        {:error, :not_a_group}
+
+      not admin?(conversation_id, actor_id) ->
+        {:error, :unauthorized}
+
       true ->
         conversation
         |> Conversation.changeset(%{avatar_url: avatar_url})
@@ -656,9 +758,15 @@ defmodule ViraChat.Chat do
     title = String.trim(title)
 
     cond do
-      conversation.type != "group" -> {:error, :not_a_group}
-      not admin?(conversation_id, actor_id) -> {:error, :unauthorized}
-      title == "" -> {:error, :empty}
+      conversation.type != "group" ->
+        {:error, :not_a_group}
+
+      not admin?(conversation_id, actor_id) ->
+        {:error, :unauthorized}
+
+      title == "" ->
+        {:error, :empty}
+
       true ->
         conversation
         |> Conversation.changeset(%{title: title})
@@ -668,7 +776,9 @@ defmodule ViraChat.Chat do
 
   def promote_to_admin(conversation_id, actor_id, target_user_id) do
     cond do
-      not admin?(conversation_id, actor_id) -> {:error, :unauthorized}
+      not admin?(conversation_id, actor_id) ->
+        {:error, :unauthorized}
+
       true ->
         case get_participant(conversation_id, target_user_id) do
           nil -> {:error, :not_a_participant}
@@ -686,8 +796,12 @@ defmodule ViraChat.Chat do
       |> Repo.one()
 
     cond do
-      not admin?(conversation_id, actor_id) -> {:error, :unauthorized}
-      target_user_id == actor_id and admin_count <= 1 -> {:error, :last_admin}
+      not admin?(conversation_id, actor_id) ->
+        {:error, :unauthorized}
+
+      target_user_id == actor_id and admin_count <= 1 ->
+        {:error, :last_admin}
+
       true ->
         case get_participant(conversation_id, target_user_id) do
           nil -> {:error, :not_a_participant}
@@ -698,8 +812,12 @@ defmodule ViraChat.Chat do
 
   def remove_from_group(conversation_id, actor_id, target_user_id) do
     cond do
-      not admin?(conversation_id, actor_id) -> {:error, :unauthorized}
-      target_user_id == actor_id -> {:error, :cannot_remove_self}
+      not admin?(conversation_id, actor_id) ->
+        {:error, :unauthorized}
+
+      target_user_id == actor_id ->
+        {:error, :cannot_remove_self}
+
       true ->
         case get_participant(conversation_id, target_user_id) do
           nil -> {:error, :not_a_participant}
@@ -751,7 +869,9 @@ defmodule ViraChat.Chat do
   def delete_group(conversation_id, actor_id) do
     if admin?(conversation_id, actor_id) do
       Repo.transaction(fn ->
-        message_ids = from(m in Message, where: m.conversation_id == ^conversation_id, select: m.id) |> Repo.all()
+        message_ids =
+          from(m in Message, where: m.conversation_id == ^conversation_id, select: m.id)
+          |> Repo.all()
 
         if message_ids != [] do
           Repo.delete_all(from r in MessageReaction, where: r.message_id in ^message_ids)

@@ -1,0 +1,244 @@
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <div class="min-h-screen bg-surface dark:bg-[#0b0b0d]">
+    <header class="sticky top-0 z-10 border-b border-line bg-white/95 backdrop-blur dark:border-[#222224] dark:bg-[#0d0d0d]/95">
+      <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-4 sm:px-6">
+        <.link
+          navigate={~p"/chat"}
+          aria-label="Back to chats"
+          class="flex h-9 w-9 items-center justify-center rounded-lg text-body transition hover:bg-surface-2 dark:hover:bg-[#161616]"
+        >
+          <.icon name="hero-arrow-left" class="size-5" />
+        </.link>
+
+        <div class="flex items-center gap-2.5">
+          <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-soft text-brand dark:bg-[#1b1530]">
+            <.icon name="hero-phone" class="size-4" />
+          </div>
+          <h1 class="text-[18px] font-bold tracking-tight text-ink dark:text-white">Calls</h1>
+        </div>
+
+        <div class="ml-auto flex items-center gap-1.5">
+          <%= for {value, label} <- [{"all", "All calls"}, {"missed", "Missed"}, {"video", "Video"}] do %>
+            <button
+              phx-click="filter"
+              phx-value-filter={value}
+              class={[
+                "rounded-full px-3 py-1.5 text-[11.5px] font-semibold transition",
+                @filter == value && "bg-brand text-white shadow-sm shadow-brand/30",
+                @filter != value &&
+                  "border border-line bg-white text-body hover:bg-surface-2 dark:border-[#2a2a2a] dark:bg-[#161616] dark:text-[#d8dfeb]"
+              ]}
+            >
+              {label}
+            </button>
+          <% end %>
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <div class="grid gap-5 lg:grid-cols-[380px_1fr]">
+        <div class="overflow-hidden rounded-2xl border border-line bg-white dark:border-[#242424] dark:bg-[#141414]">
+          <div class="flex items-center justify-between border-b border-line px-4 py-3 dark:border-[#242424]">
+            <p class="text-[11px] font-bold uppercase tracking-[0.08em] text-muted">All calls</p>
+            <span class="rounded-full bg-surface-2 px-2 py-0.5 text-[10.5px] font-semibold text-body dark:bg-[#161616]">
+              {length(@calls)}
+            </span>
+          </div>
+
+          <%= if @calls == [] do %>
+            <div class="px-6 py-14 text-center">
+              <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-soft text-brand dark:bg-[#1b1530]">
+                <.icon name="hero-phone" class="size-5" />
+              </div>
+              <p class="text-[13px] font-semibold text-ink dark:text-white">No calls here yet</p>
+              <p class="mt-1 text-[11.5px] text-body">
+                Start a voice or video call from any conversation.
+              </p>
+            </div>
+          <% else %>
+            <div class="max-h-[560px] overflow-y-auto">
+              <%= for call <- @calls do %>
+                <% other = other_user(call, @current_user) %>
+                <% dir = direction(call, @current_user) %>
+                <button
+                  type="button"
+                  phx-click="select"
+                  phx-value-id={call.id}
+                  class={[
+                    "flex w-full items-center gap-3 border-b border-line px-4 py-3 text-left transition last:border-0 hover:bg-surface-2 dark:border-[#242424] dark:hover:bg-[#1c1c1c]",
+                    @selected && @selected.id == call.id && "bg-brand-soft dark:bg-[#1b1530]"
+                  ]}
+                >
+                  <%= if other && other.avatar_url do %>
+                    <img
+                      src={other.avatar_url}
+                      class="h-10 w-10 flex-shrink-0 rounded-full object-cover"
+                    />
+                  <% else %>
+                    <div class={"flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-[11px] font-bold text-white #{ViraChat.Accounts.User.avatar_gradient(other)}"}>
+                      {String.first(display_name(other)) |> String.upcase()}
+                    </div>
+                  <% end %>
+
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-[12.5px] font-semibold text-ink dark:text-white">
+                      {display_name(other)}
+                    </p>
+                    <p class={[
+                      "mt-0.5 flex items-center gap-1 text-[11.5px]",
+                      dir == :missed && "text-danger",
+                      dir != :missed && "text-body"
+                    ]}>
+                      <.icon
+                        name={
+                          if dir == :missed,
+                            do: "hero-phone-x-mark",
+                            else: if(dir == :outgoing, do: "hero-arrow-up-right", else: "hero-arrow-down-left")
+                        }
+                        class="size-3.5"
+                      />
+                      {direction_label(dir)} · {call_time(call)}
+                    </p>
+                  </div>
+
+                  <div class="flex flex-col items-end gap-0.5">
+                    <.icon
+                      name={if call.call_type == "video", do: "hero-video-camera", else: "hero-phone"}
+                      class="size-4 text-muted"
+                    />
+                    <span class="text-[10.5px] text-muted">{duration_label(call)}</span>
+                  </div>
+                </button>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="rounded-2xl border border-line bg-white dark:border-[#242424] dark:bg-[#141414]">
+          <%= if @selected do %>
+            <% other = other_user(@selected, @current_user) %>
+            <% dir = direction(@selected, @current_user) %>
+            <div class="flex flex-col items-center px-6 py-12 text-center">
+              <%= if other && other.avatar_url do %>
+                <img src={other.avatar_url} class="h-20 w-20 rounded-full object-cover" />
+              <% else %>
+                <div class={"flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br text-2xl font-bold text-white #{ViraChat.Accounts.User.avatar_gradient(other)}"}>
+                  {String.first(display_name(other)) |> String.upcase()}
+                </div>
+              <% end %>
+
+              <p class="mt-4 text-[17px] font-bold text-ink dark:text-white">
+                {display_name(other)}
+              </p>
+              <p class={[
+                "mt-0.5 flex items-center gap-1 text-[12px] font-medium",
+                dir == :missed && "text-danger",
+                dir != :missed && "text-body"
+              ]}>
+                {direction_label(dir)} · {status_label(@selected.status)}
+              </p>
+
+              <dl class="mt-6 w-full max-w-xs divide-y divide-line text-left dark:divide-[#242424]">
+                <div class="flex items-center justify-between gap-4 py-2.5">
+                  <dt class="text-[11.5px] text-muted">Type</dt>
+                  <dd class="text-[12px] font-medium text-ink dark:text-white">
+                    {if @selected.call_type == "video", do: "Video call", else: "Voice call"}
+                  </dd>
+                </div>
+                <div class="flex items-center justify-between gap-4 py-2.5">
+                  <dt class="text-[11.5px] text-muted">Duration</dt>
+                  <dd class="text-[12px] font-medium text-ink dark:text-white">
+                    {duration_label(@selected)}
+                  </dd>
+                </div>
+                <div class="flex items-center justify-between gap-4 py-2.5">
+                  <dt class="text-[11.5px] text-muted">Started</dt>
+                  <dd class="text-[12px] font-medium text-ink dark:text-white">
+                    {call_time(@selected)}
+                  </dd>
+                </div>
+                <div class="flex items-center justify-between gap-4 py-2.5">
+                  <dt class="text-[11.5px] text-muted">Chat</dt>
+                  <dd class="max-w-[60%] truncate text-[12px] font-medium text-ink dark:text-white">
+                    {if @selected.conversation.type == "group",
+                      do: @selected.conversation.title || "Group",
+                      else: "Direct message"}
+                  </dd>
+                </div>
+              </dl>
+
+              <div class="mt-6 flex flex-wrap justify-center gap-2">
+                <button
+                  phx-click="call_back"
+                  class="flex items-center gap-1.5 rounded-xl bg-brand px-5 py-2.5 text-[12px] font-semibold text-white shadow-sm shadow-brand/30 transition hover:bg-brand-600"
+                >
+                  <.icon
+                    name={if @selected.call_type == "video", do: "hero-video-camera", else: "hero-phone"}
+                    class="size-3.5"
+                  /> Call back
+                </button>
+                <button
+                  phx-click="open_conversation"
+                  phx-value-id={@selected.conversation_id}
+                  class="rounded-xl border border-line px-5 py-2.5 text-[12px] font-semibold text-ink transition hover:border-brand/30 hover:text-brand dark:border-[#2a2a2a] dark:text-white"
+                >
+                  Open chat
+                </button>
+                <button
+                  phx-click="close_selected"
+                  class="rounded-xl px-4 py-2.5 text-[12px] font-semibold text-body transition hover:bg-surface-2 dark:hover:bg-[#1c1c1c]"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          <% else %>
+            <div class="flex flex-col items-center px-6 py-16 text-center">
+              <div class="flex h-16 w-16 items-center justify-center rounded-3xl bg-brand-soft text-brand dark:bg-[#1b1530]">
+                <.icon name="hero-phone" class="size-7" />
+              </div>
+
+              <p class="mt-4 text-[19px] font-bold text-ink dark:text-white">All Calls</p>
+              <p class="mt-1 text-[12.5px] text-body">Pick a call on the left to view its details.</p>
+
+              <div class="mt-8 flex items-center gap-10">
+                <div class="text-center">
+                  <p class="text-[22px] font-bold text-ink dark:text-white">{@stats.total}</p>
+                  <p class="text-[11px] text-muted">Calls</p>
+                </div>
+                <div class="h-8 w-px bg-line dark:bg-[#2a2a2a]"></div>
+                <div class="text-center">
+                  <p class="text-[22px] font-bold text-danger">{@stats.missed}</p>
+                  <p class="text-[11px] text-muted">Missed</p>
+                </div>
+                <div class="h-8 w-px bg-line dark:bg-[#2a2a2a]"></div>
+                <div class="text-center">
+                  <p class="text-[22px] font-bold text-ink dark:text-white">{@stats.video}</p>
+                  <p class="text-[11px] text-muted">Video</p>
+                </div>
+              </div>
+
+              <div class="mt-6 flex gap-2">
+                <%= for {value, label} <- [{"all", "All calls"}, {"missed", "Missed"}, {"video", "Video"}] do %>
+                  <button
+                    phx-click="filter"
+                    phx-value-filter={value}
+                    class={[
+                      "rounded-xl px-4 py-2 text-[11.5px] font-semibold transition",
+                      @filter == value && "bg-brand text-white",
+                      @filter != value &&
+                        "border border-line text-body hover:bg-surface-2 dark:border-[#2a2a2a] dark:hover:bg-[#1c1c1c]"
+                    ]}
+                  >
+                    {label}
+                  </button>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </main>
+  </div>
+</Layouts.app>

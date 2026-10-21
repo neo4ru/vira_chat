@@ -6,6 +6,7 @@ defmodule ViraChat.Chat.Conversation do
     field :type, :string
     field :title, :string
     field :avatar_url, :string
+    field :disappearing_seconds, :integer, default: 0
 
     many_to_many :users, ViraChat.Accounts.User,
       join_through: "participants",

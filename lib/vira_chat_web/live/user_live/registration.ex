@@ -6,22 +6,13 @@ defmodule ViraChatWeb.UserLive.Registration do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 px-4 py-12">
-      <div class="w-full max-w-md">
-        <div class="text-center mb-8">
-          <.link navigate={~p"/"} class="inline-flex items-center gap-2">
-            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl">V</div>
-            <span class="text-2xl font-bold text-gray-900">ViraChat</span>
-          </.link>
-          <h1 class="text-2xl font-bold text-gray-900 mt-6">Create your account</h1>
-          <p class="text-gray-500 text-sm mt-1">
-            Enter your email — we'll send you a link to get started
-          </p>
-        </div>
-
-        <div class="bg-white rounded-2xl shadow-xl shadow-slate-900/5 border border-gray-100 p-8">
+    <Layouts.app flash={@flash} current_scope={@current_scope}>
+      <.auth_shell
+        title="Create your account"
+        subtitle="Enter your email — we'll send you a secure link to get started."
+      >
+        <div class="rounded-2xl border border-line bg-white p-5 shadow-sm dark:border-[#242424] dark:bg-[#141414]">
           <.form
-            :let={f}
             for={@form}
             id="registration_form"
             phx-submit="save"
@@ -29,60 +20,65 @@ defmodule ViraChatWeb.UserLive.Registration do
             class="space-y-4"
           >
             <div>
-              <label for={f[:email].id} class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label
+                for={@form[:email].id}
+                class="mb-1.5 block text-[12px] font-semibold text-ink dark:text-white"
+              >
+                Email
+              </label>
               <input
                 type="email"
-                name={f[:email].name}
-                id={f[:email].id}
-                value={f[:email].value}
+                name={@form[:email].name}
+                id={@form[:email].id}
+                value={@form[:email].value}
                 required
                 autofocus
                 autocomplete="username"
                 spellcheck="false"
                 phx-mounted={JS.focus()}
-                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="you@example.com"
+                class="w-full rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-[13px] text-ink outline-none transition placeholder:text-muted focus:border-brand/40 focus:bg-white focus:ring-2 focus:ring-brand/15 dark:border-[#2a2a2a] dark:bg-[#161616] dark:text-white dark:focus:bg-[#111]"
               />
-              <p :if={f[:email].errors != []} class="mt-1 text-xs text-red-600">
-                <%= f[:email].errors |> Enum.map(&elem(&1, 0)) |> Enum.join(", ") %>
-              </p>
+              <%= for {message, _opts} <- @form[:email].errors do %>
+                <p class="mt-1 text-[11px] font-medium text-danger">{message}</p>
+              <% end %>
             </div>
 
             <button
               type="submit"
               phx-disable-with="Creating account..."
-              class="w-full py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition"
+              class="w-full rounded-xl bg-brand px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm shadow-brand/30 transition hover:bg-brand-600 disabled:opacity-60"
             >
               Create an account
             </button>
           </.form>
 
-          <p class="text-xs text-gray-500 text-center mt-4">
+          <p class="mt-4 text-center text-[11px] leading-relaxed text-muted">
             By creating an account you agree to our Terms and Privacy Policy.
           </p>
         </div>
 
-        <p class="text-center text-sm text-gray-500 mt-6">
+        <p class="mt-5 text-center text-[12.5px] text-body">
           Already have an account?
-          <.link navigate={~p"/users/log-in"} class="text-blue-600 hover:underline font-medium">
+          <.link navigate={~p"/users/log-in"} class="font-semibold text-brand hover:underline">
             Log in
           </.link>
         </p>
-      </div>
-    </div>
+      </.auth_shell>
+    </Layouts.app>
     """
   end
 
   @impl true
   def mount(_params, _session, %{assigns: %{current_scope: %{user: user}}} = socket)
       when not is_nil(user) do
-    {:ok, redirect(socket, to: ViraChatWeb.UserAuth.signed_in_path(socket))}
+    {:ok, redirect(socket, to: ~p"/chat")}
   end
 
   def mount(_params, _session, socket) do
     changeset = Accounts.change_user_email(%User{}, %{}, validate_unique: false)
 
-    {:ok, assign_form(socket, changeset), temporary_assigns: [form: nil]}
+    {:ok, assign_form(socket, changeset)}
   end
 
   @impl true

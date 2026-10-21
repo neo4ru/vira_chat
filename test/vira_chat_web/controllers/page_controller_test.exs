@@ -1,8 +1,11 @@
 defmodule ViraChatWeb.PageControllerTest do
   use ViraChatWeb.ConnCase
 
-  test "GET /", %{conn: conn} do
+  test "GET / renders the landing page", %{conn: conn} do
     conn = get(conn, ~p"/")
-    assert html_response(conn, 200) =~ "Peace of mind from prototype to production"
+    html = html_response(conn, 200)
+
+    assert html =~ "ViraChat"
+    assert html =~ "Chat. Connect."
   end
 end
